@@ -1,0 +1,10 @@
+{
+  "name": "enny-toro-violin",
+  "version": "1.0.0",
+  "description": "Sitio web de Enny Toro, violinista",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve -l 5173 .",
+    "build": "mkdir -p dist && cp index.html academia.html dist/ && cp -r public dist/ 2>/dev/null || true"
+  }
+}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academia · Enny Toro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="public/css/style.css">
+</head>
+<body>
+
+<div class="auth">
+
+  <!-- LADO IZQUIERDO: presentación -->
+  <aside class="auth-side">
+    <div class="bg"><img src="public/img/enny-escenario.jpg" alt="Enny Toro en escenario"></div>
+    <a href="index.html" class="back">← Volver al inicio</a>
+    <div class="auth-pitch">
+      <span class="eyebrow on-dark">La Academia</span>
+      <h1>Aprende el arte del violín.</h1>
+      <p>Accede al campus de la Academia Enny Toro: clases por niveles, partituras, ejercicios y el seguimiento de tu progreso, todo en un mismo lugar.</p>
+      <ul class="feats">
+        <li><span class="ck">✓</span> Clases: inicial, intermedio y adoración</li>
+        <li><span class="ck">✓</span> Biblioteca de partituras y recursos</li>
+        <li><span class="ck">✓</span> Seguimiento personalizado de tu avance</li>
+        <li><span class="ck">✓</span> Comunidad y soporte directo</li>
+      </ul>
+    </div>
+    <p class="mini">“Cada nota puede acercar a las personas a algo más grande que ellas mismas.”</p>
+  </aside>
+
+  <!-- LADO DERECHO: login / registro -->
+  <main class="auth-main">
+    <span class="blob g a1"></span>
+    <span class="blob s a2"></span>
+    <div class="auth-card">
+      <a href="index.html" class="brand">
+        <span class="mark">E</span>
+        <span><b>Enny&nbsp;Toro</b><span>Academia</span></span>
+      </a>
+      <h2 class="title" id="auth-title">Bienvenida de vuelta</h2>
+      <p class="sub" id="auth-sub">Inicia sesión para entrar a tu campus.</p>
+
+      <div class="auth-tabs">
+        <button id="tab-login" class="active" type="button">Iniciar sesión</button>
+        <button id="tab-registro" type="button">Crear cuenta</button>
+      </div>
+
+      <!-- LOGIN -->
+      <form class="auth-form active" id="form-login">
+        <div class="field"><label>Correo</label><input type="email" required placeholder="tu@correo.com"></div>
+        <div class="field"><label>Contraseña</label><input type="password" required placeholder="••••••••"></div>
+        <div class="row">
+          <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;color:var(--gray)"><input type="checkbox" style="width:auto"> Recuérdame</label>
+          <a href="#">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button type="submit" class="btn btn-gold">Entrar a la Academia</button>
+        <div class="auth-msg" id="msg-login"></div>
+      </form>
+
+      <!-- REGISTRO -->
+      <form class="auth-form" id="form-registro">
+        <div class="field"><label>Nombre completo</label><input type="text" required placeholder="Tu nombre"></div>
+        <div class="field"><label>Correo</label><input type="email" required placeholder="tu@correo.com"></div>
+        <div class="field"><label>Contraseña</label><input type="password" required placeholder="Crea una contraseña" minlength="6"></div>
+        <button type="submit" class="btn btn-gold">Crear mi cuenta</button>
+        <div class="auth-msg" id="msg-registro"></div>
+      </form>
+
+      <p class="auth-note">Al continuar aceptas las condiciones de la Academia Enny Toro.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+  const tabLogin = document.getElementById('tab-login');
+  const tabReg = document.getElementById('tab-registro');
+  const formLogin = document.getElementById('form-login');
+  const formReg = document.getElementById('form-registro');
+  const title = document.getElementById('auth-title');
+  const sub = document.getElementById('auth-sub');
+
+  function show(which){
+    const isLogin = which === 'login';
+    tabLogin.classList.toggle('active', isLogin);
+    tabReg.classList.toggle('active', !isLogin);
+    formLogin.classList.toggle('active', isLogin);
+    formReg.classList.toggle('active', !isLogin);
+    title.textContent = isLogin ? 'Bienvenida de vuelta' : 'Crea tu cuenta';
+    sub.textContent = isLogin ? 'Inicia sesión para entrar a tu campus.' : 'Regístrate para acceder a las clases.';
+    if (history.replaceState) history.replaceState(null, '', isLogin ? '#login' : '#registro');
+  }
+  tabLogin.addEventListener('click', () => show('login'));
+  tabReg.addEventListener('click', () => show('registro'));
+
+  // abre la pestaña según el ancla (#registro / #login)
+  if (location.hash === '#registro') show('registro');
+
+  // Demo front-end: aún no hay backend de cuentas.
+  // Cuando exista, aquí se conecta el login/registro real (API / Firebase / etc.)
+  formLogin.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const m = document.getElementById('msg-login');
+    m.textContent = 'Cuentas en preparación: pronto podrás iniciar sesión. Por ahora, escríbeme por WhatsApp para acceder a las clases.';
+    m.classList.add('show');
+  });
+  formReg.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const m = document.getElementById('msg-registro');
+    m.textContent = '¡Gracias por tu interés! El registro en línea estará disponible muy pronto. Mientras tanto te contactaré para darte acceso.';
+    m.classList.add('show');
+  });
+</script>
+</body>
+</html>
