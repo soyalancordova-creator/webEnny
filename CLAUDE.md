@@ -1,46 +1,63 @@
 # Enny Toro · Sitio web (violinista)
 
-Sitio web personal de Enny Toro, violinista cristiana basada en Guayaquil, Ecuador.
-La web es estática (HTML + CSS + JS, sin framework). El objetivo es transmitir fe, elegancia y un look luxury (no usar "de Córdova" en el sitio).
+Sitio web personal de Enny Toro, violinista basada en Guayaquil, Ecuador.
+Web estática (HTML + CSS + JS, sin framework). Objetivo: elegancia, minimalismo luxury y mucha interacción (no usar "de Córdova" en el sitio).
 
 ## Comandos
-- `npm run dev` — sirve el sitio en local (puerto 5173) con recarga en vivo
+- `npm run dev` — sirve el sitio en local (puerto 5173)
 - `npm run build` — copia los archivos listos para publicar a `dist/`
 
 ## Estructura
-- `index.html` — página principal (one-page): nav, hero, secciones y footer. JS embebido al final.
-- `academia.html` — página aparte de la Academia con login/registro (gate). JS embebido propio.
-- `public/css/style.css` — hoja de estilos COMPARTIDA por ambas páginas (toda la apariencia vive aquí).
-- `public/img/` — fotos reales de Enny optimizadas (.jpg ~1600px): enny-escenario, enny-escenario2, enny-estudio, enny-retrato, enny-rostro, enny-tocando, enny-concierto, enny-partituras.
+- `index.html` — **one-page con scroll continuo**. CSS y JS embebidos (autocontenido, sin peticiones extra).
+- `academia.html` — página aparte de la Academia con login/registro (gate). Usa `public/css/style.css`.
+- `public/css/style.css` — **solo la usa `academia.html`**. El diseño de `index.html` vive embebido en su `<style>`.
+- `public/img/` — fotos reales de Enny (.jpg): enny-escenario, enny-escenario2, enny-estudio, enny-retrato,
+  enny-rostro, enny-tocando, enny-concierto, enny-partituras, **enny-editorial-negro**, **enny-editorial-beige**,
+  **enny-alan** (Enny con su esposo Alan Córdova, B/N).
+- `public/videos/violin-transform.mp4` — video del violín que se desarma. **Debe servirse local**: cargarlo
+  desde una URL remota (GitHub raw) mete latencia de red en cada seek y traba el scroll.
 
-## Login / Registro (academia.html)
-- Hoy es solo front-end (demo): los formularios muestran un mensaje, NO hay backend de cuentas.
-- Para que funcione de verdad falta conectar autenticación real (API propia, Firebase Auth, Supabase, etc.).
+## Secciones de `index.html` (en orden)
+Hero → marquee → **escena de video con scroll** → stats (contadores) → Sobre mí → Servicios → Galería → Blog → banda CTA → Contacto → Footer
 
-## Secciones del sitio (en orden)
-Inicio (hero) → versículo → Pilares → Sobre mí → Academia (gateway que enlaza a `academia.html`) → Reservar clase (Calendly) → Eventos → Partituras → Galería → Contacto → Footer
+## Escena de video (`.vscene`)
+- `640vh` de alto; `#vpin` se pinea con ScrollTrigger (`pinSpacing:false`).
+- El progreso del scroll mapea a `video.currentTime`.
+- **Umbral de seek `0.12s`** (`seek()` en el script). Bajarlo dispara ~50 seeks/s y traba el scroll; no reducirlo.
+- Encima van **5 tarjetas glassmorphic** (`.gcard`) que entran alternando izquierda/derecha con cross-fade,
+  repartidas en 5 tramos iguales del scroll. Fondo oscuro translúcido a propósito: sobre los frames claros
+  del video, un glass blanco deja el texto ilegible.
 
-## Identidad visual (luxury)
-- Paleta: blanco/marfil `#FFFFFF`/`#F7F4EE`/`#F2ECDD`, dorado metálico `#CD9C20` + brillo `#F5CB5C` + profundo `#A07F3A`, gris/carbón `#2F2F2F`/`#222220`, negro `#0B0B0B`. (Variables CSS en `public/css/style.css`.)
-- Estética: luxury, blanco dominante con detalles dorados tipo oro, degradados dorados y mucho **vidrio esmerilado (glassmorphism) estilo Apple** (`backdrop-filter: blur`). Secciones claras en marfil; secciones de contraste (academia, reservar, contacto, footer) en gris/carbón con dorado.
-- Tipografías: Cormorant Garamond (display, títulos) + Jost (cuerpo).
-- El dorado se aplica como degradado metálico (`--gold-grad`); halo dorado suave detrás del retrato del hero.
+## Identidad visual
+- Paleta (variables en `:root`): marfil `#F7F4EF`/`#EFE9DF`, tinta `#141110`, vino `#6E1423`, dorado `#B08442`/`#D8B87C`.
+- **Tema claro por defecto + toggle a oscuro** (botón `#theme`, se recuerda en `localStorage` bajo `enny-theme`).
+  Los colores se cambian SOLO vía variables en `:root` y `html[data-theme="dark"]`.
+- Botón primario usa `--fill` / `--fill-ink` / `--fill-hov` (en oscuro es crema sobre fondo negro, no vino).
+- Estética Apple / liquid glass: `backdrop-filter: blur() saturate()` en nav, tarjetas, tags, formulario.
+- Tipografías: Playfair Display (display) + Jost (cuerpo, pesos 200–400 con tracking amplio).
+- Cursor propio (punto + anillo con lag) que crece sobre elementos interactivos; se desactiva en táctil.
 
-## Configuración (bloque `CONFIG` al inicio del `<script>` en index.html)
-Toda la conexión externa se controla desde un único objeto `CONFIG`:
-- `calendly` — enlace de Calendly; abre el popup al pulsar `#calendly-btn`
-- `whatsapp` — número solo con dígitos y código de país (Ecuador 593); el formulario de contacto arma el mensaje y abre wa.me, y rellena el dato de contacto
-- `email` — ya configurado: `ennytorov@gmail.com`
-- `instagram` / `youtube` / `facebook` — si están vacíos, el ícono se oculta
+## Interacciones implementadas
+- Contadores animados (`[data-n]`) con IntersectionObserver.
+- Reveal on scroll (`.rv` + `.in`), con retardos vía `data-d`.
+- Nav pill deslizante + scroll-spy **por geometría** (no IntersectionObserver: falla con la sección pineada).
+- Halo que sigue al puntero en `.card`, tilt 3D en la foto del hero, hover en galería con caption.
+
+## Configuración (`CONFIG` al inicio del `<script>` en index.html)
+- `video` — ruta del mp4 (local)
+- `whatsapp` — dígitos + código de país (593); el formulario arma el mensaje y abre wa.me
 
 ## Pendientes (TODO)
-- Pegar el enlace real de Calendly en `CONFIG.calendly`
-- Pegar el número real de WhatsApp en `CONFIG.whatsapp`
-- Rellenar enlaces de redes en `CONFIG.instagram/youtube/facebook`
-- Reemplazar imágenes de Unsplash por fotos reales en `public/img/` (la carpeta está vacía aún)
-- Opcional: sección de testimonios
+- Enlazar los artículos del Blog a páginas o posts reales (hoy los enlaces son `#`).
+- Conectar autenticación real en `academia.html` (hoy es demo front-end sin backend).
+- Opcional: Calendly para reservas; hoy todo el contacto sale por WhatsApp.
+- Opcional: sección de testimonios.
+- Limpieza: en la raíz quedan los mp4 originales (`kling_...mp4`, `davinci_...mp4`); el que usa el sitio es
+  la copia en `public/videos/`. Se pueden borrar los de la raíz si no se necesitan como respaldo.
 
 ## Convenciones
-- Mantener todo en español (audiencia latinoamericana)
-- Respetar la paleta y tipografías; no introducir colores nuevos sin acordarlo
-- Cada cambio debe verse bien en móvil (el sitio es responsive, breakpoints en 980px y 720px)
+- Todo en español (audiencia latinoamericana).
+- Respetar paleta y tipografías; no introducir colores nuevos sin acordarlo, y siempre como variable CSS
+  definida en los dos temas.
+- Cada cambio debe verse bien en móvil (breakpoints en 1080px, 900px y 720px).
+- El menú móvil usa `--panel` (color sólido): con glass translúcido el texto del hero se transparenta detrás.
