@@ -1,63 +1,88 @@
-# Enny Toro · Sitio web (violinista)
+# Enny Toro · Sitio + Academia
 
-Sitio web personal de Enny Toro, violinista basada en Guayaquil, Ecuador.
-Web estática (HTML + CSS + JS, sin framework). Objetivo: elegancia, minimalismo luxury y mucha interacción (no usar "de Córdova" en el sitio).
+Sitio de Enny Toro, violinista en Guayaquil, más la plataforma de su academia.
+Web estática (HTML + CSS + JS, sin framework ni build) sobre **Supabase** (auth, base de datos, storage),
+desplegada en **Vercel**. No usar "de Córdova" en el sitio.
 
 ## Comandos
-- `npm run dev` — sirve el sitio en local (puerto 5173)
-- `npm run build` — copia los archivos listos para publicar a `dist/`
+- `npm run dev` — sirve en local (puerto 5173). `serve.json` desactiva clean-URLs para que
+  `articulo.html?slug=…` no pierda la query.
+- No hay build: Vercel publica los archivos tal cual.
 
-## Estructura
-- `index.html` — **one-page con scroll continuo**. CSS y JS embebidos (autocontenido, sin peticiones extra).
-- `academia.html` — página aparte de la Academia con login/registro (gate). Usa `public/css/style.css`.
-- `public/css/style.css` — **solo la usa `academia.html`**. El diseño de `index.html` vive embebido en su `<style>`.
-- `public/img/` — fotos reales de Enny (.jpg): enny-escenario, enny-escenario2, enny-estudio, enny-retrato,
-  enny-rostro, enny-tocando, enny-concierto, enny-partituras, **enny-editorial-negro**, **enny-editorial-beige**,
-  **enny-alan** (Enny con su esposo Alan Córdova, B/N).
-- `public/videos/violin-transform.mp4` — video del violín que se desarma. **Debe servirse local**: cargarlo
-  desde una URL remota (GitHub raw) mete latencia de red en cada seek y traba el scroll.
+## Páginas
+| Archivo | Qué es | Acceso |
+|---|---|---|
+| `index.html` | One-page: hero, video con scroll, stats, sobre mí, servicios, galería, blog, contacto | público |
+| `blog.html` | Todos los artículos, con filtro por categoría | público |
+| `articulo.html` | Un artículo. Lee `?slug=…` (y `#slug=…` de respaldo) | público |
+| `academia.html` | Login / registro / verificación por código | público |
+| `campus.html` | Campus del alumno: perfil, biblioteca, proyectos, comunidad | requiere sesión |
+| `admin.html` | Panel: edita todo el contenido del sitio y ve los alumnos | requiere rol `admin` |
 
-## Secciones de `index.html` (en orden)
-Hero → marquee → **escena de video con scroll** → stats (contadores) → Sobre mí → Servicios → Galería → Blog → banda CTA → Contacto → Footer
+## Archivos compartidos
+- `public/css/brand.css` — **el sistema de diseño entero**: tokens de color (claro y oscuro), nav,
+  botones, glass, formularios, footer. Todas las páginas lo cargan. Los estilos propios de cada
+  página van embebidos en su `<style>`.
+- `public/js/config.js` — **el único archivo que se edita a mano**: claves de Supabase, Calendly,
+  enlace de la comunidad.
+- `public/js/app.js` — cliente Supabase, sesión, guardas de acceso, helpers de contenido,
+  subida de archivos, y la UI común (tema, cursor, nav, reveal, ojito de contraseña).
+- `supabase/schema.sql` — esquema completo con RLS. Idempotente: se puede volver a ejecutar.
 
-## Escena de video (`.vscene`)
-- `640vh` de alto; `#vpin` se pinea con ScrollTrigger (`pinSpacing:false`).
-- El progreso del scroll mapea a `video.currentTime`.
-- **Umbral de seek `0.12s`** (`seek()` en el script). Bajarlo dispara ~50 seeks/s y traba el scroll; no reducirlo.
-- Encima van **5 tarjetas glassmorphic** (`.gcard`) que entran alternando izquierda/derecha con cross-fade,
-  repartidas en 5 tramos iguales del scroll. Fondo oscuro translúcido a propósito: sobre los frames claros
-  del video, un glass blanco deja el texto ilegible.
+## Contenido editable
+El HTML trae el contenido por defecto escrito a mano; al cargar, `hidratar()` lo sobrescribe con lo
+que haya en Supabase. Si Supabase no responde, el sitio sigue viéndose bien. Marcadores en el HTML:
+- `data-c="bloque.campo"` → reemplaza texto
+- `data-c-html="bloque.campo"` → reemplaza HTML (pasa por `limpiarHTML`)
+- `data-c-img="bloque.campo"` → reemplaza `src`
+
+Bloques JSON en `site_content`: `hero`, `scene`, `stats`, `about`, `contact`, `band`, `community`, `academia`.
+Colecciones: `video_cards`, `services`, `gallery`, `posts`, `resources`, `student_projects`.
+
+## Seguridad (no aflojar esto)
+- **RLS activo en todas las tablas.** Lectura pública solo del contenido del sitio y de los posts
+  publicados. Escritura solo con rol `admin`.
+- `is_admin()` es `SECURITY DEFINER` a propósito: sin eso, una policy de `profiles` que consulta
+  `profiles` entra en recursión infinita.
+- Un alumno **no puede auto-ascenderse a admin**: la policy de update de `profiles` compara el `role`
+  contra el valor actual.
+- En storage, cada usuario solo escribe bajo `su-uid/` en `avatars` y `projects`.
+- La **anon key es pública por diseño** y va en `config.js`. La `service_role` NUNCA va al front.
+- `vercel.json` manda CSP, HSTS, `nosniff`, `X-Frame-Options` y `noindex` para admin/campus.
+
+## Auth
+Registro pide nombre, correo, edad y contraseña dos veces (con ojito y medidor de fuerza).
+Supabase envía un código de 6 dígitos; se verifica con `verifyOtp({type:'signup'})`.
+**Para que llegue el código y no un enlace**, la plantilla de correo de Supabase
+(Authentication → Email Templates → Confirm signup) tiene que incluir `{{ .Token }}`.
+
+Para hacerte admin, regístrate y luego en el SQL Editor:
+```sql
+update public.profiles set role='admin'
+where id = (select id from auth.users where email='tu@correo.com');
+```
+
+## Escena de video (`.vscene` en index.html)
+- `640vh`; `#vpin` se pinea con ScrollTrigger (`pinSpacing:false`).
+- **Umbral de seek `0.12s`**. Bajarlo dispara ~50 seeks/s y traba el scroll.
+- El video **debe servirse local** (`public/videos/`): desde una URL remota, cada seek paga latencia de red.
+- 5 tarjetas glass entran alternando izquierda/derecha. Fondo oscuro a propósito: sobre los frames
+  claros del video, un glass blanco deja el texto ilegible.
 
 ## Identidad visual
-- Paleta (variables en `:root`): marfil `#F7F4EF`/`#EFE9DF`, tinta `#141110`, vino `#6E1423`, dorado `#B08442`/`#D8B87C`.
-- **Tema claro por defecto + toggle a oscuro** (botón `#theme`, se recuerda en `localStorage` bajo `enny-theme`).
-  Los colores se cambian SOLO vía variables en `:root` y `html[data-theme="dark"]`.
-- Botón primario usa `--fill` / `--fill-ink` / `--fill-hov` (en oscuro es crema sobre fondo negro, no vino).
-- Estética Apple / liquid glass: `backdrop-filter: blur() saturate()` en nav, tarjetas, tags, formulario.
-- Tipografías: Playfair Display (display) + Jost (cuerpo, pesos 200–400 con tracking amplio).
-- Cursor propio (punto + anillo con lag) que crece sobre elementos interactivos; se desactiva en táctil.
+- Marfil `#F7F4EF`/`#EFE9DF`, tinta `#141110`, vino `#6E1423`, dorado `#B08442`/`#D8B87C`.
+- Tema claro por defecto + toggle oscuro, recordado en `localStorage` (`enny-theme`).
+- Botón primario usa `--fill`/`--fill-ink`/`--fill-hov` (en oscuro es crema, no vino).
+- Playfair Display (display) + Jost (cuerpo). Liquid glass estilo Apple en nav y tarjetas.
+- Cursor propio; se desactiva en táctil.
+- El menú móvil usa `--panel` (sólido): con glass translúcido el texto de atrás se transparenta.
 
-## Interacciones implementadas
-- Contadores animados (`[data-n]`) con IntersectionObserver.
-- Reveal on scroll (`.rv` + `.in`), con retardos vía `data-d`.
-- Nav pill deslizante + scroll-spy **por geometría** (no IntersectionObserver: falla con la sección pineada).
-- Halo que sigue al puntero en `.card`, tilt 3D en la foto del hero, hover en galería con caption.
-
-## Configuración (`CONFIG` al inicio del `<script>` en index.html)
-- `video` — ruta del mp4 (local)
-- `whatsapp` — dígitos + código de país (593); el formulario arma el mensaje y abre wa.me
-
-## Pendientes (TODO)
-- Enlazar los artículos del Blog a páginas o posts reales (hoy los enlaces son `#`).
-- Conectar autenticación real en `academia.html` (hoy es demo front-end sin backend).
-- Opcional: Calendly para reservas; hoy todo el contacto sale por WhatsApp.
-- Opcional: sección de testimonios.
-- Limpieza: en la raíz quedan los mp4 originales (`kling_...mp4`, `davinci_...mp4`); el que usa el sitio es
-  la copia en `public/videos/`. Se pueden borrar los de la raíz si no se necesitan como respaldo.
+## Pendientes
+- Skool **no se puede embeber** (bloquea iframes): la comunidad abre en pestaña nueva.
+- Editor de blog en el panel: hoy se escribe HTML a mano en un textarea.
+- Reordenar tarjetas/servicios/galería arrastrando (hoy el orden es el campo `position`).
 
 ## Convenciones
-- Todo en español (audiencia latinoamericana).
-- Respetar paleta y tipografías; no introducir colores nuevos sin acordarlo, y siempre como variable CSS
-  definida en los dos temas.
-- Cada cambio debe verse bien en móvil (breakpoints en 1080px, 900px y 720px).
-- El menú móvil usa `--panel` (color sólido): con glass translúcido el texto del hero se transparenta detrás.
+- Todo en español.
+- Colores nuevos solo como variable CSS definida en los dos temas.
+- Cada cambio debe verse bien en móvil (breakpoints 1080px, 980px, 900px, 720px).

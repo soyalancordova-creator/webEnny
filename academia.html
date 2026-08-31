@@ -1,117 +1,426 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Academia · Enny Toro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Academia — Enny Toro</title>
+<meta name="description" content="Entra al campus de la Academia Enny Toro: clases, partituras, recursos y comunidad.">
+<meta name="theme-color" content="#F7F4EF">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="public/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="public/css/brand.css">
+<style>
+body{min-height:100svh}
+.auth{display:grid;grid-template-columns:1.02fr .98fr;min-height:100svh}
+
+/* ---------- lado izquierdo ---------- */
+.side{position:relative;overflow:hidden;display:flex;flex-direction:column;
+  justify-content:space-between;padding:clamp(2rem,4vw,3.4rem);color:#fff}
+.side .bg{position:absolute;inset:0;z-index:0}
+.side .bg img{width:100%;height:100%;object-fit:cover}
+.side .bg::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(150deg,rgba(12,9,8,.86),rgba(12,9,8,.55) 45%,rgba(110,20,35,.55))}
+.side>*{position:relative;z-index:1}
+.side .volver{display:inline-flex;align-items:center;gap:.5rem;font-size:.66rem;letter-spacing:.2em;
+  text-transform:uppercase;color:rgba(255,255,255,.72);transition:gap .4s var(--ez),color .3s;
+  align-self:flex-start}
+.side .volver:hover{gap:.9rem;color:#fff}
+.side .eyebrow{color:var(--gold-2)}
+.side h1{font-size:clamp(2.2rem,4vw,3.4rem);margin:.9rem 0 1.2rem;color:#fff}
+.side h1 em{color:var(--gold-2)}
+.side .lead{color:rgba(255,255,255,.78);max-width:40ch;font-size:1rem}
+.feats{display:grid;gap:.7rem;margin-top:2rem}
+.feat{display:flex;align-items:center;gap:.85rem;padding:.85rem 1.1rem;border-radius:16px;
+  background:rgba(255,255,255,.10);backdrop-filter:blur(12px) saturate(160%);
+  -webkit-backdrop-filter:blur(12px) saturate(160%);
+  border:1px solid rgba(255,255,255,.22);font-size:.92rem;color:rgba(255,255,255,.9)}
+.feat i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:var(--gold);color:#1a1310;font-style:normal;font-size:.75rem}
+.quote{font-family:var(--serif);font-style:italic;font-size:1.02rem;color:rgba(255,255,255,.72);
+  max-width:38ch;line-height:1.6}
+
+/* ---------- lado derecho ---------- */
+.main{display:flex;align-items:center;justify-content:center;padding:clamp(1.6rem,4vw,3rem);
+  background:var(--bg);position:relative;overflow:hidden}
+.main::before{content:'';position:absolute;width:46vw;height:46vw;left:-18vw;bottom:-22vw;border-radius:50%;
+  background:radial-gradient(circle,rgba(176,132,66,.16),transparent 70%);filter:blur(30px)}
+.card-auth{position:relative;width:min(430px,100%);background:var(--glass);
+  backdrop-filter:blur(20px) saturate(170%);-webkit-backdrop-filter:blur(20px) saturate(170%);
+  border:1px solid var(--glass-brd);border-radius:26px;box-shadow:var(--shadow);
+  padding:clamp(1.6rem,3vw,2.3rem)}
+.brand-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.6rem}
+.brand-row .logo{font-family:var(--serif);font-size:1.15rem}
+.brand-row .logo i{font-style:normal;color:var(--gold)}
+.card-auth h2{font-size:1.75rem;margin-bottom:.4rem}
+.card-auth .sub{color:var(--ink-2);font-size:.92rem;margin-bottom:1.6rem}
+
+.tabs{display:flex;gap:.25rem;padding:.28rem;border-radius:999px;background:var(--glass-2);
+  border:1px solid var(--hair);margin-bottom:1.5rem}
+.tabs button{flex:1;padding:.62rem;border-radius:999px;font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-2);transition:all .4s var(--ez)}
+.tabs button.on{background:var(--fill);color:var(--fill-ink)}
+
+form{display:none;gap:.95rem}
+form.on{display:grid}
+.row-min{display:flex;justify-content:space-between;align-items:center;gap:1rem;font-size:.8rem}
+.row-min a{color:var(--ink-2);transition:color .3s}
+.row-min a:hover{color:var(--wine)}
+.chk{display:flex;align-items:center;gap:.5rem;color:var(--ink-2);cursor:pointer}
+.chk input{width:auto;padding:0}
+
+.meter{height:3px;border-radius:99px;background:var(--hair);overflow:hidden;margin-top:.15rem}
+.meter i{display:block;height:100%;width:0;background:var(--err);transition:width .35s var(--ez),background .35s}
+.meter.m2 i{background:var(--warn)}
+.meter.m3 i{background:var(--ok)}
+
+.code-row{display:flex;gap:.5rem;justify-content:space-between}
+.code-row input{text-align:center;font-size:1.5rem;font-family:var(--serif);padding:.7rem .2rem;
+  letter-spacing:0}
+.nota{font-size:.8rem;color:var(--ink-3);text-align:center;line-height:1.55}
+.nota a{color:var(--wine);cursor:pointer}
+.legal{font-size:.72rem;color:var(--ink-3);text-align:center;margin-top:1.2rem;line-height:1.5}
+
+@media (max-width:900px){
+  .auth{grid-template-columns:1fr}
+  .side{min-height:44svh;padding:2rem 1.4rem}
+  .side .feats,.side .quote{display:none}
+  .main{padding:2rem 1.2rem 3rem}
+}
+</style>
 </head>
 <body>
+<div class="cur"></div><div class="cur-r"></div>
 
 <div class="auth">
-
-  <!-- LADO IZQUIERDO: presentación -->
-  <aside class="auth-side">
-    <div class="bg"><img src="public/img/enny-escenario.jpg" alt="Enny Toro en escenario"></div>
-    <a href="index.html" class="back">← Volver al inicio</a>
-    <div class="auth-pitch">
-      <span class="eyebrow on-dark">La Academia</span>
-      <h1>Aprende el arte del violín.</h1>
-      <p>Accede al campus de la Academia Enny Toro: clases por niveles, partituras, ejercicios y el seguimiento de tu progreso, todo en un mismo lugar.</p>
-      <ul class="feats">
-        <li><span class="ck">✓</span> Clases: inicial, intermedio y adoración</li>
-        <li><span class="ck">✓</span> Biblioteca de partituras y recursos</li>
-        <li><span class="ck">✓</span> Seguimiento personalizado de tu avance</li>
-        <li><span class="ck">✓</span> Comunidad y soporte directo</li>
-      </ul>
+  <!-- ================= LADO IZQUIERDO ================= -->
+  <aside class="side">
+    <div class="bg"><img id="sideImg" src="public/img/enny-editorial-negro.jpg" alt="Enny Toro con su violín"></div>
+    <a href="index.html" class="volver">← Volver al inicio</a>
+    <div>
+      <span class="eyebrow">La Academia</span>
+      <h1>Aprende el arte del <em>violín</em></h1>
+      <p class="lead">Entra al campus: clases por niveles, biblioteca de partituras, recursos descargables y una comunidad que practica contigo.</p>
+      <div class="feats">
+        <div class="feat"><i>✓</i><span>Clases pregrabadas por nivel</span></div>
+        <div class="feat"><i>✓</i><span>Biblioteca de partituras y recursos</span></div>
+        <div class="feat"><i>✓</i><span>Sube tus proyectos y recibe devolución</span></div>
+        <div class="feat"><i>✓</i><span>Comunidad y soporte directo</span></div>
+      </div>
     </div>
-    <p class="mini">“Cada nota puede acercar a las personas a algo más grande que ellas mismas.”</p>
+    <p class="quote">«Cada nota puede acercar a las personas a algo más grande que ellas mismas.»</p>
   </aside>
 
-  <!-- LADO DERECHO: login / registro -->
-  <main class="auth-main">
-    <span class="blob g a1"></span>
-    <span class="blob s a2"></span>
-    <div class="auth-card">
-      <a href="index.html" class="brand">
-        <span class="mark">E</span>
-        <span><b>Enny&nbsp;Toro</b><span>Academia</span></span>
-      </a>
-      <h2 class="title" id="auth-title">Bienvenida de vuelta</h2>
-      <p class="sub" id="auth-sub">Inicia sesión para entrar a tu campus.</p>
+  <!-- ================= LADO DERECHO ================= -->
+  <main class="main">
+    <div class="card-auth">
+      <div class="brand-row">
+        <a href="index.html" class="logo"><b>Enny</b> <i>Toro</i></a>
+        <button class="icb" id="theme" aria-label="Cambiar tema">
+          <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+      </div>
 
-      <div class="auth-tabs">
-        <button id="tab-login" class="active" type="button">Iniciar sesión</button>
-        <button id="tab-registro" type="button">Crear cuenta</button>
+      <h2 id="tTitle">Bienvenida de vuelta</h2>
+      <p class="sub" id="tSub">Inicia sesión para entrar a tu campus.</p>
+
+      <div class="tabs" id="tabs">
+        <button class="on" data-t="login" type="button">Iniciar sesión</button>
+        <button data-t="registro" type="button">Crear cuenta</button>
       </div>
 
       <!-- LOGIN -->
-      <form class="auth-form active" id="form-login">
-        <div class="field"><label>Correo</label><input type="email" required placeholder="tu@correo.com"></div>
-        <div class="field"><label>Contraseña</label><input type="password" required placeholder="••••••••"></div>
-        <div class="row">
-          <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;color:var(--gray)"><input type="checkbox" style="width:auto"> Recuérdame</label>
-          <a href="#">¿Olvidaste tu contraseña?</a>
+      <form class="on" id="fLogin" novalidate>
+        <div class="fld">
+          <label for="lMail">Correo</label>
+          <input id="lMail" type="email" required autocomplete="email" placeholder="tu@correo.com">
         </div>
-        <button type="submit" class="btn btn-gold">Entrar a la Academia</button>
-        <div class="auth-msg" id="msg-login"></div>
+        <div class="fld">
+          <label for="lPass">Contraseña</label>
+          <input id="lPass" type="password" required autocomplete="current-password" placeholder="••••••••">
+          <button type="button" class="eye" aria-label="Mostrar contraseña"></button>
+        </div>
+        <div class="row-min">
+          <label class="chk"><input type="checkbox" id="lRem" checked> Recuérdame</label>
+          <a id="lForgot">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button class="btn btn-fill" type="submit" id="lBtn"><span>Entrar a la Academia</span></button>
+        <div class="msg" id="lMsg"></div>
       </form>
 
       <!-- REGISTRO -->
-      <form class="auth-form" id="form-registro">
-        <div class="field"><label>Nombre completo</label><input type="text" required placeholder="Tu nombre"></div>
-        <div class="field"><label>Correo</label><input type="email" required placeholder="tu@correo.com"></div>
-        <div class="field"><label>Contraseña</label><input type="password" required placeholder="Crea una contraseña" minlength="6"></div>
-        <button type="submit" class="btn btn-gold">Crear mi cuenta</button>
-        <div class="auth-msg" id="msg-registro"></div>
+      <form id="fReg" novalidate>
+        <div class="two">
+          <div class="fld">
+            <label for="rName">Nombre completo</label>
+            <input id="rName" required autocomplete="name" placeholder="Tu nombre">
+          </div>
+          <div class="fld">
+            <label for="rAge">Edad</label>
+            <input id="rAge" type="number" min="5" max="120" required placeholder="18">
+          </div>
+        </div>
+        <div class="fld">
+          <label for="rMail">Correo</label>
+          <input id="rMail" type="email" required autocomplete="email" placeholder="tu@correo.com">
+        </div>
+        <div class="fld">
+          <label for="rPass">Contraseña</label>
+          <input id="rPass" type="password" required autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+          <button type="button" class="eye" aria-label="Mostrar contraseña"></button>
+          <div class="meter" id="rMeter"><i></i></div>
+        </div>
+        <div class="fld">
+          <label for="rPass2">Repite la contraseña</label>
+          <input id="rPass2" type="password" required autocomplete="new-password" placeholder="••••••••">
+          <button type="button" class="eye" aria-label="Mostrar contraseña"></button>
+        </div>
+        <button class="btn btn-fill" type="submit" id="rBtn"><span>Crear mi cuenta</span></button>
+        <div class="msg" id="rMsg"></div>
       </form>
 
-      <p class="auth-note">Al continuar aceptas las condiciones de la Academia Enny Toro.</p>
+      <!-- VERIFICACIÓN -->
+      <form id="fCode" novalidate>
+        <p class="nota" style="margin-bottom:.4rem">
+          Te enviamos un código de 6 dígitos a<br><strong id="cMail"></strong>
+        </p>
+        <div class="code-row" id="codeRow">
+          <input inputmode="numeric" maxlength="1" aria-label="Dígito 1">
+          <input inputmode="numeric" maxlength="1" aria-label="Dígito 2">
+          <input inputmode="numeric" maxlength="1" aria-label="Dígito 3">
+          <input inputmode="numeric" maxlength="1" aria-label="Dígito 4">
+          <input inputmode="numeric" maxlength="1" aria-label="Dígito 5">
+          <input inputmode="numeric" maxlength="1" aria-label="Dígito 6">
+        </div>
+        <button class="btn btn-fill" type="submit" id="cBtn"><span>Verificar y entrar</span></button>
+        <p class="nota">¿No te llegó? <a id="cResend">Reenviar código</a> · <a id="cBack">Cambiar correo</a></p>
+        <div class="msg" id="cMsg"></div>
+      </form>
+
+      <p class="legal">Al continuar aceptas las condiciones de la Academia Enny Toro.</p>
     </div>
   </main>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="public/js/config.js"></script>
+<script src="public/js/app.js"></script>
 <script>
-  const tabLogin = document.getElementById('tab-login');
-  const tabReg = document.getElementById('tab-registro');
-  const formLogin = document.getElementById('form-login');
-  const formReg = document.getElementById('form-registro');
-  const title = document.getElementById('auth-title');
-  const sub = document.getElementById('auth-sub');
+window.addEventListener('DOMContentLoaded', function () {
+'use strict';
+var A = window.EnnyApp;
+A.iniciarTema(); A.iniciarCursor(); A.iniciarOjos();
+document.querySelectorAll('.eye').forEach(function (b) { b.innerHTML = A.ICON_OJO; });
 
-  function show(which){
-    const isLogin = which === 'login';
-    tabLogin.classList.toggle('active', isLogin);
-    tabReg.classList.toggle('active', !isLogin);
-    formLogin.classList.toggle('active', isLogin);
-    formReg.classList.toggle('active', !isLogin);
-    title.textContent = isLogin ? 'Bienvenida de vuelta' : 'Crea tu cuenta';
-    sub.textContent = isLogin ? 'Inicia sesión para entrar a tu campus.' : 'Regístrate para acceder a las clases.';
-    if (history.replaceState) history.replaceState(null, '', isLogin ? '#login' : '#registro');
+var next = new URLSearchParams(location.search).get('next') || '';
+
+/* ---------- si ya hay sesión, adentro ---------- */
+function irAdentro(perfil) {
+  if (next && /^[a-z0-9_-]+\.html$/i.test(next)) { location.href = next; return; }
+  location.href = perfil && perfil.role === 'admin' ? 'admin.html' : 'campus.html';
+}
+if (A.listo) {
+  A.perfil().then(function (p) { if (p) irAdentro(p); });
+  A.bloque('academia').then(function (d) {
+    if (d && d.image) document.getElementById('sideImg').src = d.image;
+  });
+}
+
+/* ---------- pestañas ---------- */
+var fLogin = document.getElementById('fLogin'),
+    fReg   = document.getElementById('fReg'),
+    fCode  = document.getElementById('fCode'),
+    tTitle = document.getElementById('tTitle'),
+    tSub   = document.getElementById('tSub'),
+    tabs   = document.getElementById('tabs');
+
+function ver(cual) {
+  [fLogin, fReg, fCode].forEach(function (f) { f.classList.remove('on'); });
+  tabs.style.display = cual === 'code' ? 'none' : 'flex';
+  if (cual === 'login') {
+    fLogin.classList.add('on');
+    tTitle.textContent = 'Bienvenida de vuelta';
+    tSub.textContent = 'Inicia sesión para entrar a tu campus.';
+  } else if (cual === 'registro') {
+    fReg.classList.add('on');
+    tTitle.textContent = 'Crea tu cuenta';
+    tSub.textContent = 'Regístrate para acceder a las clases.';
+  } else {
+    fCode.classList.add('on');
+    tTitle.textContent = 'Verifica tu correo';
+    tSub.textContent = 'Un paso más y estás dentro.';
   }
-  tabLogin.addEventListener('click', () => show('login'));
-  tabReg.addEventListener('click', () => show('registro'));
+  tabs.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === cual); });
+}
+tabs.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-t]');
+  if (b) ver(b.dataset.t);
+});
+if (location.hash === '#registro') ver('registro');
 
-  // abre la pestaña según el ancla (#registro / #login)
-  if (location.hash === '#registro') show('registro');
+/* ---------- fuerza de contraseña ---------- */
+var rPass = document.getElementById('rPass'), meter = document.getElementById('rMeter');
+rPass.addEventListener('input', function () {
+  var v = rPass.value, n = 0;
+  if (v.length >= 8) n++;
+  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) n++;
+  if (/[0-9]/.test(v) || /[^A-Za-z0-9]/.test(v)) n++;
+  meter.className = 'meter m' + n;
+  meter.firstElementChild.style.width = (n / 3 * 100) + '%';
+});
 
-  // Demo front-end: aún no hay backend de cuentas.
-  // Cuando exista, aquí se conecta el login/registro real (API / Firebase / etc.)
-  formLogin.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const m = document.getElementById('msg-login');
-    m.textContent = 'Cuentas en preparación: pronto podrás iniciar sesión. Por ahora, escríbeme por WhatsApp para acceder a las clases.';
-    m.classList.add('show');
+/* ---------- casillas del código ---------- */
+var codeInputs = [].slice.call(document.querySelectorAll('#codeRow input'));
+codeInputs.forEach(function (inp, i) {
+  inp.addEventListener('input', function () {
+    inp.value = inp.value.replace(/\D/g, '').slice(0, 1);
+    if (inp.value && i < 5) codeInputs[i + 1].focus();
   });
-  formReg.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const m = document.getElementById('msg-registro');
-    m.textContent = '¡Gracias por tu interés! El registro en línea estará disponible muy pronto. Mientras tanto te contactaré para darte acceso.';
-    m.classList.add('show');
+  inp.addEventListener('keydown', function (e) {
+    if (e.key === 'Backspace' && !inp.value && i > 0) codeInputs[i - 1].focus();
   });
+  inp.addEventListener('paste', function (e) {
+    e.preventDefault();
+    var t = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+    t.split('').forEach(function (ch, k) { if (codeInputs[k]) codeInputs[k].value = ch; });
+    if (t.length) codeInputs[Math.min(t.length, 5)].focus();
+  });
+});
+function leerCodigo() { return codeInputs.map(function (i) { return i.value; }).join(''); }
+
+/* ---------- helpers ---------- */
+function cargando(btn, on, texto) {
+  btn.disabled = on;
+  btn.querySelector('span').innerHTML = on
+    ? '<span class="spin" style="vertical-align:-3px"></span>'
+    : texto;
+}
+function sinBackend(el) {
+  A.aviso(el, 'La conexión con la base de datos aún no está configurada. Edita public/js/config.js con tus claves de Supabase.', 'err');
+}
+var ERRORES = {
+  'Invalid login credentials': 'Correo o contraseña incorrectos.',
+  'Email not confirmed': 'Tu correo aún no está verificado. Revisa tu bandeja o reenvía el código.',
+  'User already registered': 'Ya existe una cuenta con ese correo. Inicia sesión.',
+  'Token has expired or is invalid': 'El código expiró o no es válido. Pide uno nuevo.',
+  'Password should be at least 6 characters': 'La contraseña es demasiado corta.',
+  'For security purposes, you can only request this after 60 seconds': 'Espera un minuto antes de pedir otro código.'
+};
+function traducir(e) {
+  var m = (e && e.message) || '';
+  for (var k in ERRORES) if (m.indexOf(k) > -1) return ERRORES[k];
+  return m || 'Ocurrió un error. Intenta de nuevo.';
+}
+
+/* ---------- REGISTRO ---------- */
+var correoPendiente = '';
+document.getElementById('fReg').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var msg = document.getElementById('rMsg'), btn = document.getElementById('rBtn');
+  var nombre = document.getElementById('rName').value.trim();
+  var edad   = parseInt(document.getElementById('rAge').value, 10);
+  var correo = document.getElementById('rMail').value.trim().toLowerCase();
+  var p1 = rPass.value, p2 = document.getElementById('rPass2').value;
+
+  if (nombre.length < 2) return A.aviso(msg, 'Escribe tu nombre completo.', 'err');
+  if (!(edad >= 5 && edad <= 120)) return A.aviso(msg, 'Indica una edad válida.', 'err');
+  if (p1.length < 8) return A.aviso(msg, 'La contraseña debe tener al menos 8 caracteres.', 'err');
+  if (p1 !== p2) return A.aviso(msg, 'Las dos contraseñas no coinciden.', 'err');
+  if (!A.listo) return sinBackend(msg);
+
+  cargando(btn, true);
+  A.sb.auth.signUp({
+    email: correo, password: p1,
+    options: { data: { full_name: nombre, age: edad }, emailRedirectTo: location.origin + '/campus.html' }
+  }).then(function (r) {
+    cargando(btn, false, 'Crear mi cuenta');
+    if (r.error) return A.aviso(msg, traducir(r.error), 'err');
+    if (r.data.session) return irAdentro(null);       // confirmación desactivada
+    correoPendiente = correo;
+    document.getElementById('cMail').textContent = correo;
+    ver('code');
+    A.aviso(document.getElementById('cMsg'), 'Revisa tu correo: te enviamos un código de 6 dígitos.', 'ok');
+  }).catch(function (e) {
+    cargando(btn, false, 'Crear mi cuenta');
+    A.aviso(msg, traducir(e), 'err');
+  });
+});
+
+/* ---------- VERIFICACIÓN ---------- */
+document.getElementById('fCode').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var msg = document.getElementById('cMsg'), btn = document.getElementById('cBtn');
+  var code = leerCodigo();
+  if (code.length !== 6) return A.aviso(msg, 'Escribe los 6 dígitos del código.', 'err');
+  if (!A.listo) return sinBackend(msg);
+
+  cargando(btn, true);
+  A.sb.auth.verifyOtp({ email: correoPendiente, token: code, type: 'signup' })
+    .then(function (r) {
+      cargando(btn, false, 'Verificar y entrar');
+      if (r.error) return A.aviso(msg, traducir(r.error), 'err');
+      A.aviso(msg, '¡Cuenta verificada! Entrando…', 'ok');
+      setTimeout(function () { irAdentro(null); }, 700);
+    })
+    .catch(function (e) {
+      cargando(btn, false, 'Verificar y entrar');
+      A.aviso(msg, traducir(e), 'err');
+    });
+});
+document.getElementById('cResend').addEventListener('click', function () {
+  var msg = document.getElementById('cMsg');
+  if (!A.listo) return sinBackend(msg);
+  A.sb.auth.resend({ type: 'signup', email: correoPendiente }).then(function (r) {
+    if (r.error) return A.aviso(msg, traducir(r.error), 'err');
+    A.aviso(msg, 'Te reenviamos el código.', 'ok');
+  });
+});
+document.getElementById('cBack').addEventListener('click', function () { ver('registro'); });
+
+/* ---------- LOGIN ---------- */
+document.getElementById('fLogin').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var msg = document.getElementById('lMsg'), btn = document.getElementById('lBtn');
+  var correo = document.getElementById('lMail').value.trim().toLowerCase();
+  var pass = document.getElementById('lPass').value;
+  if (!correo || !pass) return A.aviso(msg, 'Completa correo y contraseña.', 'err');
+  if (!A.listo) return sinBackend(msg);
+
+  cargando(btn, true);
+  A.sb.auth.signInWithPassword({ email: correo, password: pass }).then(function (r) {
+    if (r.error) {
+      cargando(btn, false, 'Entrar a la Academia');
+      if ((r.error.message || '').indexOf('Email not confirmed') > -1) {
+        correoPendiente = correo;
+        document.getElementById('cMail').textContent = correo;
+        A.sb.auth.resend({ type: 'signup', email: correo });
+        ver('code');
+        A.aviso(document.getElementById('cMsg'), 'Tu correo no está verificado. Te enviamos un código nuevo.', 'info');
+        return;
+      }
+      return A.aviso(msg, traducir(r.error), 'err');
+    }
+    A.perfil().then(irAdentro);
+  }).catch(function (e) {
+    cargando(btn, false, 'Entrar a la Academia');
+    A.aviso(msg, traducir(e), 'err');
+  });
+});
+
+/* ---------- RECUPERAR CONTRASEÑA ---------- */
+document.getElementById('lForgot').addEventListener('click', function () {
+  var msg = document.getElementById('lMsg');
+  var correo = document.getElementById('lMail').value.trim().toLowerCase();
+  if (!correo) return A.aviso(msg, 'Escribe tu correo arriba y vuelve a pulsar aquí.', 'info');
+  if (!A.listo) return sinBackend(msg);
+  A.sb.auth.resetPasswordForEmail(correo, { redirectTo: location.origin + '/academia.html' })
+    .then(function (r) {
+      if (r.error) return A.aviso(msg, traducir(r.error), 'err');
+      A.aviso(msg, 'Te enviamos un enlace para restablecer tu contraseña.', 'ok');
+    });
+});
+});
 </script>
 </body>
 </html>
