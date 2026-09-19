@@ -60,10 +60,11 @@
   display:flex;align-items:center;gap:3.5rem}
 .marq-t span::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--gold)}
 
-/* ---------- VIDEO ---------- */
+/* ---------- VIOLÍN 3D (scroll) ---------- */
 .vscene{position:relative;height:640vh;background:#080706}
 .vpin{position:relative;height:100svh;overflow:hidden}
-.vpin video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#080706}
+.violin-stage{position:absolute;inset:0;background:#080706}
+.violin-stage canvas{display:block}
 .vveil{position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(to right,rgba(8,7,6,.62),transparent 34%,transparent 66%,rgba(8,7,6,.62)),
     linear-gradient(to bottom,rgba(8,7,6,.58),transparent 24%,transparent 60%,rgba(8,7,6,.80))}
@@ -283,10 +284,10 @@
   </div>
 </div>
 
-<!-- VIDEO -->
+<!-- VIOLÍN 3D (pseudo-3D con scroll, sin video) -->
 <section class="vscene" id="trayectoria">
   <div class="vpin" id="vpin">
-    <video id="vid" muted playsinline preload="auto" poster="public/img/enny-editorial-negro.jpg"></video>
+    <div id="violinStage" class="violin-stage" aria-hidden="true"></div>
     <div class="vveil"></div>
     <div class="vhead">
       <span class="eyebrow" data-c="scene.eyebrow">El violín · capa a capa</span>
@@ -565,13 +566,14 @@
 <script src="https://assets.calendly.com/assets/external/widget.js" defer></script>
 <script src="public/js/config.js" defer></script>
 <script src="public/js/app.js" defer></script>
-<script defer>
+<script type="module">
+import { createViolinFlythrough } from './public/js/violin-flythrough.js';
 window.addEventListener('DOMContentLoaded', function () {
 'use strict';
 var A = window.EnnyApp;
 A.iniciarBase();
 
-var VIDEO = 'public/videos/violin-transform.mp4';
+var VIOLIN_FOTO = 'public/img/violin-3d.jpg';
 
 /* ---------- scroll suave + spy por geometría ---------- */
 var hd = document.getElementById('hd');
@@ -659,18 +661,11 @@ document.getElementById('form').addEventListener('submit', function (ev) {
   abrirCal({ name: nombre, email: correo, nota: interes + (msg ? ' — ' + msg : '') });
 });
 
-/* ---------- video ---------- */
-var vid = document.getElementById('vid'), bar = document.getElementById('vbar'), pct = document.getElementById('vpct');
-var last = -1, queued = false, target = 0, built = false;
-vid.src = VIDEO;
-
-function seek() {
-  queued = false;
-  var d = vid.duration;
-  if (!d || !isFinite(d)) return;
-  var t = Math.min(Math.max(target * d, 0), d - .05);
-  if (Math.abs(t - last) > .12) { last = t; try { vid.currentTime = t; } catch (e) {} }
-}
+/* ---------- violín 3D (pseudo-3D desde foto, sin video) ---------- */
+var stage = document.getElementById('violinStage');
+var bar = document.getElementById('vbar'), pct = document.getElementById('vpct');
+var built = false;
+var flythrough = createViolinFlythrough({ container: stage, imageSrc: VIOLIN_FOTO });
 
 function construir() {
   if (built || !window.gsap || !window.ScrollTrigger) return;
@@ -680,8 +675,7 @@ function construir() {
     trigger: '.vscene', start: 'top top', end: 'bottom bottom',
     pin: '#vpin', pinSpacing: false, anticipatePin: 1,
     onUpdate: function (self) {
-      target = self.progress;
-      if (!queued) { queued = true; requestAnimationFrame(seek); }
+      flythrough.setProgress(self.progress);
       bar.style.width = (self.progress * 100).toFixed(1) + '%';
       pct.textContent = Math.round(self.progress * 100) + '%';
     }
@@ -714,13 +708,6 @@ function animarTarjetas() {
   tlCards.to('.vhead', { opacity: 0, y: -24, duration: seg * .3 }, seg * .10);
   ScrollTrigger.refresh();
 }
-
-if (vid.readyState >= 1) { try { vid.currentTime = .01; } catch (e) {} }
-vid.addEventListener('loadedmetadata', function () {
-  var p = vid.play();
-  if (p && p.then) p.then(function () { vid.pause(); }).catch(function () {});
-  try { vid.currentTime = .01; } catch (e) {}
-}, { once: true });
 
 addEventListener('load', function () { construir(); spy(); hidratar(); });
 

@@ -4,4 +4,6 @@ dist/
 .claude/settings.local.json
 .vercel
 
-.vercel
+# Assets de referencia sin optimizar (modelo glTF ~60MB, zip fuente).
+# No se sirven en la web; lo que sí se usa ya está copiado en public/.
+/3d Violin web y render/

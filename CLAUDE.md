@@ -6,7 +6,10 @@ desplegada en **Vercel**. No usar "de Córdova" en el sitio.
 
 ## Comandos
 - `npm run dev` — sirve en local (puerto 5173). `serve.json` desactiva clean-URLs para que
-  `articulo.html?slug=…` no pierda la query.
+  `articulo.html?slug=…` no pierda la query, y añade un rewrite explícito de `/` → `/index.html`.
+  **Ambas claves son necesarias**: `serve` 14.x, en cuanto detecta CUALQUIER `serve.json`, dejar de
+  resolver `index.html` para `/` automáticamente (muestra listado de archivos) a menos que el rewrite
+  esté explícito. Si `npm run dev` muestra "Files within enny-violin" en vez del sitio, es esto.
 - No hay build: Vercel publica los archivos tal cual.
 
 ## Páginas
@@ -62,12 +65,36 @@ update public.profiles set role='admin'
 where id = (select id from auth.users where email='tu@correo.com');
 ```
 
-## Escena de video (`.vscene` en index.html)
-- `640vh`; `#vpin` se pinea con ScrollTrigger (`pinSpacing:false`).
-- **Umbral de seek `0.12s`**. Bajarlo dispara ~50 seeks/s y traba el scroll.
-- El video **debe servirse local** (`public/videos/`): desde una URL remota, cada seek paga latencia de red.
-- 5 tarjetas glass entran alternando izquierda/derecha. Fondo oscuro a propósito: sobre los frames
-  claros del video, un glass blanco deja el texto ilegible.
+## Escena del violín 3D (`.vscene` en index.html)
+Ya **no es un `<video>`**: es un violín pseudo-3D renderizado en vivo con Three.js a partir de UNA
+foto (`public/img/violin-3d.jpg`), controlado por scroll. Sin seek, sin latencia de red, sin umbral
+que ajustar — la cámara se recalcula cada frame directo sobre la trayectoria.
+
+- `public/js/violin-flythrough.js` (ES module): recorta el fondo blanco de la foto con flood-fill,
+  extruye una malla con bordes redondeados según la distancia al borde (transformada de distancia
+  euclídea), y le aplica un shader con luz fija para que se vea el barniz y el volumen del cuerpo.
+  Expone `createViolinFlythrough({container, imageSrc}) → {setProgress(t), destroy()}`.
+- Es puerto 1:1 de un proyecto React/@react-three/fiber que subió el usuario
+  (`3d Violin web y render/violin-3d-camera-flythrough (2).zip`, ignorado por git — ver más abajo).
+  Se tradujo a JS vanilla porque el sitio no usa build ni framework; la matemática (recorte, extrusión,
+  shader, trayectoria de 9 keyframes `KEYS`) es idéntica.
+- `index.html` carga el módulo con `<script type="module">` e `import`; Three.js se trae de jsDelivr
+  (`three@0.160.0`, ES module, sin bundler).
+- `.vscene` sigue midiendo `640vh`; `#vpin` se pinea con ScrollTrigger (`pinSpacing:false`) igual que
+  antes. En el `onUpdate` ya no se hace seek: se llama `flythrough.setProgress(self.progress)`.
+- Las 5 tarjetas glass (`animarTarjetas()`) no cambiaron: siguen alternando izquierda/derecha sobre el
+  mismo ScrollTrigger. Fondo oscuro a propósito: sobre los tonos claros del violín, un glass blanco
+  deja el texto ilegible.
+- No tocar la trayectoria `KEYS` sin necesidad: los ángulos están elegidos para que nunca se vea de
+  perfil puro (90°), porque la malla es una extrusión (relieve), no un modelo 3D completo, y de canto
+  se notaría que es plana.
+
+### El otro archivo 3D (pendiente, no integrado)
+`3d Violin web y render/violin/` es un modelo glTF real (geometría + texturas, ~60MB) — más exacto,
+pero sin cámara ni ángulos sincronizados todavía. Está ignorado por git por el peso. Para usarlo algún
+día hace falta: comprimir texturas (los PNG de 10-19MB deberían ir a JPG/WebP y bajar de resolución),
+posiblemente Draco en la geometría, y armar a mano una trayectoria de cámara como `KEYS` pero en las
+coordenadas de ese modelo. Es un proyecto aparte, no algo para hacer "de paso".
 
 ## Identidad visual
 - Marfil `#F7F4EF`/`#EFE9DF`, tinta `#141110`, vino `#6E1423`, dorado `#B08442`/`#D8B87C`.
