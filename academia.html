@@ -100,12 +100,12 @@ form.on{display:grid}
     <div>
       <span class="eyebrow">La Academia</span>
       <h1>Aprende el arte del <em>violín</em></h1>
-      <p class="lead">Entra al campus: clases por niveles, biblioteca de partituras, recursos descargables y una comunidad que practica contigo.</p>
+      <p class="lead">Partituras que suenan, se repiten y se ralentizan a tu ritmo, y una comunidad de músicos que sirven con su talento.</p>
       <div class="feats">
-        <div class="feat"><i>✓</i><span>Clases pregrabadas por nivel</span></div>
-        <div class="feat"><i>✓</i><span>Biblioteca de partituras y recursos</span></div>
-        <div class="feat"><i>✓</i><span>Sube tus proyectos y recibe devolución</span></div>
-        <div class="feat"><i>✓</i><span>Comunidad y soporte directo</span></div>
+        <div class="feat"><i>✓</i><span>Partituras interactivas: cursor, loop, velocidad y metrónomo</span></div>
+        <div class="feat"><i>✓</i><span>Grabaciones de Enny sincronizadas compás a compás</span></div>
+        <div class="feat"><i>✓</i><span>Comunidades, chat y peticiones de oración</span></div>
+        <div class="feat"><i>✓</i><span>Comunidad gratis · biblioteca desde $5 al mes</span></div>
       </div>
     </div>
     <p class="quote">«Cada nota puede acercar a las personas a algo más grande que ellas mismas.»</p>
@@ -198,6 +198,15 @@ form.on{display:grid}
         <div class="msg" id="cMsg"></div>
       </form>
 
+      <div id="demoBox" hidden style="margin-top:1.3rem;padding:1rem 1.1rem;border-radius:18px;border:1px dashed color-mix(in srgb,var(--gold) 60%,transparent);background:var(--glass-2)">
+        <span class="eyebrow">Modo demostración</span>
+        <p style="font-size:.84rem;color:var(--ink-2);margin:.4rem 0 .8rem;line-height:1.5">Prueba toda la plataforma sin crear cuenta. Los datos se guardan solo en este navegador.</p>
+        <div style="display:grid;gap:.5rem">
+          <button class="btn btn-fill btn-sm" type="button" data-demo="alumno"><span>Entrar como alumno de prueba</span></button>
+          <button class="btn btn-ghost btn-sm" type="button" data-demo="admin"><span>Entrar como Enny (administradora)</span></button>
+        </div>
+        <p style="font-size:.72rem;color:var(--ink-3);margin-top:.7rem;line-height:1.5">También puedes escribir: <b>alumno@demo.academia</b> / <b>demo1234</b> o <b>enny@demo.academia</b> / <b>admin1234</b></p>
+      </div>
       <p class="legal">Al continuar aceptas las condiciones de la Academia Enny Toro.</p>
     </div>
   </main>
@@ -216,9 +225,10 @@ document.querySelectorAll('.eye').forEach(function (b) { b.innerHTML = A.ICON_OJ
 var next = new URLSearchParams(location.search).get('next') || '';
 
 /* ---------- si ya hay sesión, adentro ---------- */
-function irAdentro(perfil) {
+/* Todos entran a la plataforma; quien acaba de crear su cuenta ve primero los planes. */
+function irAdentro(perfil, nuevo) {
   if (next && /^[a-z0-9_-]+\.html$/i.test(next)) { location.href = next; return; }
-  location.href = perfil && perfil.role === 'admin' ? 'admin.html' : 'campus.html';
+  location.href = nuevo ? 'campus.html#/planes' : 'campus.html';
 }
 if (A.listo) {
   A.perfil().then(function (p) { if (p) irAdentro(p); });
@@ -332,11 +342,11 @@ document.getElementById('fReg').addEventListener('submit', function (ev) {
   cargando(btn, true);
   A.sb.auth.signUp({
     email: correo, password: p1,
-    options: { data: { full_name: nombre, age: edad }, emailRedirectTo: location.origin + '/campus.html' }
+    options: { data: { full_name: nombre, age: edad }, emailRedirectTo: location.origin + '/campus.html#/planes' }
   }).then(function (r) {
     cargando(btn, false, 'Crear mi cuenta');
     if (r.error) return A.aviso(msg, traducir(r.error), 'err');
-    if (r.data.session) return irAdentro(null);       // confirmación desactivada
+    if (r.data.session) return irAdentro(null, true); // confirmación desactivada
     correoPendiente = correo;
     document.getElementById('cMail').textContent = correo;
     ver('code');
@@ -361,7 +371,7 @@ document.getElementById('fCode').addEventListener('submit', function (ev) {
       cargando(btn, false, 'Verificar y entrar');
       if (r.error) return A.aviso(msg, traducir(r.error), 'err');
       A.aviso(msg, '¡Cuenta verificada! Entrando…', 'ok');
-      setTimeout(function () { irAdentro(null); }, 700);
+      setTimeout(function () { irAdentro(null, true); }, 700);
     })
     .catch(function (e) {
       cargando(btn, false, 'Verificar y entrar');
@@ -421,6 +431,28 @@ document.getElementById('lForgot').addEventListener('click', function () {
     });
 });
 });
+</script>
+<script type="module">
+/* Modo demo: si Supabase no está configurado (o DEMO_MODE es true), el login usa
+   cuentas de prueba locales. En producción este bloque no hace nada. */
+const cfg = window.ENNY || {}, A = window.EnnyApp;
+if (cfg.DEMO_MODE === true || !(A && A.listo)) {
+  const { createDemoStore } = await import('./public/js/campus/store-demo.js');
+  const store = createDemoStore();
+  if (await store.me()) location.replace('campus.html');
+  const box = document.getElementById('demoBox'); box.hidden = false;
+  box.querySelectorAll('[data-demo]').forEach((b) => { b.onclick = async () => { await store.signInDemo(b.dataset.demo); location.href = 'campus.html'; }; });
+  const msg = (id, t) => { const el = document.getElementById(id); el.textContent = t; el.className = 'msg show err'; };
+  document.getElementById('fLogin').addEventListener('submit', async (e) => {
+    e.preventDefault(); e.stopImmediatePropagation();
+    try { await store.signInPassword(document.getElementById('lMail').value, document.getElementById('lPass').value); location.href = 'campus.html'; }
+    catch (err) { msg('lMsg', err.message); }
+  }, true);
+  document.getElementById('fReg').addEventListener('submit', (e) => {
+    e.preventDefault(); e.stopImmediatePropagation();
+    msg('rMsg', 'En modo demostración no se crean cuentas nuevas. Usa una de las cuentas de prueba de abajo.');
+  }, true);
+}
 </script>
 </body>
 </html>

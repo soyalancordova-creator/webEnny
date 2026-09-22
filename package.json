@@ -5,6 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "npx serve -l 5173 .",
-    "build": "echo \"sitio estatico: no requiere build\""
+    "build": "echo \"sitio estatico: no requiere build\"",
+    "test:rls": "node supabase/tests/rls.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
   }
 }

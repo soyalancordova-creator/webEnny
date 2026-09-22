@@ -11,6 +11,37 @@ desplegada en **Vercel**. No usar "de Córdova" en el sitio.
   resolver `index.html` para `/` automáticamente (muestra listado de archivos) a menos que el rewrite
   esté explícito. Si `npm run dev` muestra "Files within enny-violin" en vez del sitio, es esto.
 - No hay build: Vercel publica los archivos tal cual.
+- `npm run test:rls` — 82 pruebas de RLS contra Postgres real en WASM (PGlite), con un stub de
+  Supabase (`auth.uid()`, roles, storage). Correrlo después de tocar cualquier policy de
+  `supabase/campus.sql`. `CAMPUS_SQL=ruta.sql` prueba otra versión del SQL (útil para mutaciones).
+
+## Campus (`campus.html`)
+Red social + biblioteca de partituras + suscripciones. SPA por hash (`#/comunidad`, `#/biblioteca`,
+`#/obra/:id`, `#/comunidad/:id/chat`, `#/planes`, `#/admin/...`) en ES modules sin build:
+`public/js/campus/main.js` (router, shell) + `views/*.js` (cargadas bajo demanda) + `public/css/campus.css`.
+- **Dos stores con la misma interfaz**: `store-supa.js` (Supabase real) y `store-demo.js`
+  (localStorage con datos sembrados). `DEMO_MODE:'auto'` en config.js usa demo mientras Supabase no
+  esté configurado. Cuentas demo: `alumno@demo.academia / demo1234`, `enny@demo.academia / admin1234`.
+  Cualquier función nueva va en **los dos** stores.
+- **Motor de partituras**: `score-engine.js` (OSMD 2.1.3 para dibujar; el tiempo lo manda el reloj de
+  Web Audio con scheduler lookahead, no OSMD). La línea de tiempo se arma una vez (`_buildTimeline`)
+  con repeticiones, ligaduras y anacrusa; cursor, loop, metrónomo y sync de video salen de ahí.
+  El sync de video es por pasada de compás (`sync[]`), editable desde el panel.
+- Acceso: comunidad gratis; biblioteca paga (`has_access()` en SQL: `active`, o `cancelled` hasta
+  fin del periodo). Las partituras marcadas `free` se abren sin suscripción.
+- Esquema: `supabase/campus.sql`, se ejecuta **después** de `schema.sql`. Notificaciones personales
+  solo por triggers; rate limit por trigger; la edad nunca sale en `public_profiles`.
+- Fotos: se comprimen en el navegador (`media.js`, WebP/JPEG, sin EXIF/GPS) antes de subir.
+
+## Pagos (PayPal Subscriptions)
+- Front: botones del SDK en `views/plans.js` con `custom_id = user.id`.
+- `api/paypal/activate.js` verifica la suscripción contra la API de PayPal antes de escribir;
+  `webhook.js` verifica la firma (cuerpo crudo tal cual), es idempotente (`payment_events`) y
+  siempre re-consulta el estado; `cancel.js` cancela y conserva acceso hasta fin del periodo.
+- Env vars en Vercel (NUNCA en el front): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PAYPAL_ENV`,
+  `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `PAYPAL_PLAN_MENSUAL`,
+  `PAYPAL_PLAN_TRIMESTRAL`, `PAYPAL_PLAN_ANUAL`. Los IDs de plan también van en `config.js` (son públicos).
+- `api/_lib.js` empieza con `_` para que Vercel no lo publique como ruta.
 
 ## Páginas
 | Archivo | Qué es | Acceso |
