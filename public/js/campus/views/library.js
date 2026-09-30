@@ -2,7 +2,7 @@
    BIBLIOTECA · catálogo de partituras
 ============================================================ */
 import { icon } from '../icons.js';
-import { $, $$, esc, toast, loading, empty } from '../ui.js';
+import { $, $$, esc, toast, modal, loading, empty } from '../ui.js';
 
 /** Portada: un pentagrama con notas pseudo-aleatorias pero estables por obra. */
 function staffCover(seed) {
@@ -48,18 +48,17 @@ export async function renderLibrary(ctx, view, [query]) {
   const onlyFav = qs.get('fav') === '1';
   ctx.setTitle(onlyFav ? 'Mis partituras' : 'Biblioteca');
   const st = { q: qs.get('q') || '', instrument: '', level: '', collection: qs.get('col') || '', favorites: onlyFav };
-  view.innerHTML = `<div style="max-width:1240px;margin:0 auto">
-    <div class="cx-h"><div><span class="eyebrow">${onlyFav ? 'Tu selección' : 'Biblioteca'}</span><h1>${onlyFav ? 'Mis partituras' : 'Partituras que suenan'}</h1>
-      <p>${onlyFav ? 'Las obras que marcaste con el corazón, listas para el atril.' : 'Ábrelas, escúchalas a tu velocidad, repite los compases difíciles y sigue el cursor nota a nota.'}</p></div>
-      ${ctx.me.hasAccess ? '' : `<a class="btn btn-fill btn-sm" href="#/ajustes/suscripcion"><span>${icon('crown')} Desbloquear todo</span></a>`}</div>
-    ${onlyFav ? '' : '<div class="col-strip" id="cols"></div>'}
+
+  view.innerHTML = `<div class="lib-wrap">
+    <div class="pg-head"><h1>${onlyFav ? 'Mis partituras' : 'Biblioteca'}</h1>
+      ${ctx.me.hasAccess ? '' : `<a class="btn btn-fill btn-sm" href="#/ajustes/suscripcion"><span>${icon('crown')} Desbloquear</span></a>`}</div>
+    ${onlyFav ? '' : '<div id="banner"></div>'}
     <div class="lib-top">
-      <div class="cx-search" style="max-width:340px">${icon('search')}<input id="lq" placeholder="Título, autor o etiqueta" value="${esc(st.q)}"></div>
-      <div class="cx-row" id="fInst"><button class="cx-chip on" data-v="">Todos</button><button class="cx-chip" data-v="Violín">Violín</button><button class="cx-chip" data-v="Piano">Piano</button><button class="cx-chip" data-v="Violonchelo">Chelo</button></div>
-      <div class="cx-row" id="fLvl"><button class="cx-chip on" data-v="">Todo nivel</button><button class="cx-chip" data-v="Inicial">Inicial</button><button class="cx-chip" data-v="Intermedio">Intermedio</button><button class="cx-chip" data-v="Avanzado">Avanzado</button></div>
-      <button class="cx-chip${onlyFav ? ' on' : ''}" id="fFav">${icon('heart')}Favoritos</button>
+      <div class="cx-search lib-q">${icon('search')}<input id="lq" placeholder="Título, autor o etiqueta" value="${esc(st.q)}"></div>
+      <button class="cx-iconbtn" id="fBtn" aria-label="Filtros">${icon('sliders')}<span class="fdot" hidden></span></button>
     </div>
     <div class="lib-grid" id="grid"></div></div>`;
+
   const grid = $('#grid', view);
   const load = async () => {
     loading(grid);
@@ -70,14 +69,45 @@ export async function renderLibrary(ctx, view, [query]) {
       wireCards(grid, list, ctx, st.favorites ? load : null);
     } catch (e) { empty(grid, 'info', e.message); }
   };
-  const chips = (sel, key) => $$(`${sel} [data-v]`, view).forEach((b) => { b.onclick = () => { st[key] = b.dataset.v; $$(`${sel} .cx-chip`, view).forEach((x) => x.classList.toggle('on', x === b)); load(); }; });
-  chips('#fInst', 'instrument'); chips('#fLvl', 'level');
-  $('#fFav', view).onclick = (e) => { st.favorites = !st.favorites; e.currentTarget.classList.toggle('on', st.favorites); load(); };
+
+  /* un solo botón de filtros: instrumento, nivel, colección y favoritos */
+  const marcaFiltros = () => {
+    const activos = !!(st.instrument || st.level || st.collection || st.favorites);
+    $('#fBtn .fdot', view).hidden = !activos;
+    $('#fBtn', view).classList.toggle('on', activos);
+  };
+  $('#fBtn', view).onclick = async () => {
+    let cols = [];
+    try { cols = await ctx.store.listCollections(); } catch (_) {}
+    const fila = (titulo, key, opciones) => `<div class="flt-row"><b>${titulo}</b><div class="cx-row">${opciones.map(([v, l]) =>
+      `<button class="cx-chip${st[key] === v ? ' on' : ''}" data-k="${key}" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div></div>`;
+    const m = modal({ title: 'Filtrar partituras', body: `<div class="flt">
+      ${fila('Instrumento', 'instrument', [['', 'Todos'], ['Violín', 'Violín'], ['Piano', 'Piano'], ['Violonchelo', 'Chelo']])}
+      ${fila('Nivel', 'level', [['', 'Todo nivel'], ['Inicial', 'Inicial'], ['Intermedio', 'Intermedio'], ['Avanzado', 'Avanzado']])}
+      ${cols.length ? fila('Colección', 'collection', [['', 'Todas'], ...cols.map((c) => [c.id, c.title])]) : ''}
+      <div class="flt-row"><b>Solo favoritos</b><div class="cx-row"><button class="cx-chip${st.favorites ? ' on' : ''}" id="flFav">${icon('heart')}Mis favoritos</button></div></div>
+      <div class="cx-row" style="justify-content:space-between;margin-top:1.2rem">
+        <button class="btn btn-ghost btn-sm" id="flClear"><span>Limpiar</span></button>
+        <button class="btn btn-fill btn-sm" id="flGo"><span>Ver resultados</span></button></div></div>` });
+    $$('[data-k]', m.body).forEach((b) => {
+      b.onclick = () => { st[b.dataset.k] = b.dataset.v; $$(`[data-k="${b.dataset.k}"]`, m.body).forEach((x) => x.classList.toggle('on', x === b)); };
+    });
+    $('#flFav', m.body).onclick = (e) => { st.favorites = !st.favorites; e.currentTarget.classList.toggle('on', st.favorites); };
+    $('#flClear', m.body).onclick = () => { st.instrument = ''; st.level = ''; st.collection = ''; st.favorites = false; m.close(); marcaFiltros(); load(); };
+    $('#flGo', m.body).onclick = () => { m.close(); marcaFiltros(); load(); };
+  };
+
   let t = 0; $('#lq', view).oninput = (e) => { clearTimeout(t); t = setTimeout(() => { st.q = e.target.value.trim(); load(); }, 250); };
 
-  if (!onlyFav) ctx.store.listCollections().then((cols) => {
-    $('#cols', view).innerHTML = `<a href="#/biblioteca" style="background:linear-gradient(135deg,var(--gold),var(--wine))" data-c=""><b>Todas las obras</b><small>Catálogo completo</small></a>` +
-      cols.map((c) => `<a href="#/biblioteca?col=${esc(c.id)}" data-c="${esc(c.id)}"${st.collection === c.id ? ' style="outline:2px solid var(--gold);outline-offset:2px"' : ''}><b>${esc(c.title)}</b><small>${c.count} obra${c.count === 1 ? '' : 's'} · ${esc(c.description)}</small></a>`).join('');
+  /* banner editable desde el panel administrativo */
+  if (!onlyFav) ctx.store.getContent('library_banner').then((b) => {
+    const host = $('#banner', view); if (!host || !b || !b.image) return;
+    host.innerHTML = `<${b.link ? 'a' : 'div'} class="lib-banner"${b.link ? ` href="${esc(b.link)}"` : ''}>
+      <img src="${esc(b.image)}" alt="${esc(b.alt || '')}">
+      ${b.title ? `<div class="bn-tx"><b>${esc(b.title)}</b>${b.subtitle ? `<span>${esc(b.subtitle)}</span>` : ''}</div>` : ''}
+    </${b.link ? 'a' : 'div'}>`;
   }).catch(() => {});
+
+  marcaFiltros();
   load();
 }

@@ -116,8 +116,8 @@ function paintShell() {
     <a class="cx-brand hs-logo" href="#/" aria-label="${esc(APP)}">${markSvg('hs-mark', true)}<span class="hs-word">${esc(APP.toUpperCase())}</span></a>
     <nav class="cx-nav" aria-label="Principal">${navLinks()}</nav>
     ${demoCard()}
-    ${me.hasAccess ? '' : `<div class="cx-plan"><b>Biblioteca completa</b>Partituras que suenan, con loop y metrónomo, desde $5 al mes.<a href="#/ajustes/suscripcion">Ver planes →</a></div>`}
-    <div class="cx-me" id="meBtn" role="button" tabindex="0">${avatar(me)}<div style="min-width:0"><b>${esc(me.name)}</b><span>${me.isAdmin ? 'Administradora' : me.hasAccess ? 'Suscripción activa' : 'Cuenta gratuita'}</span></div></div>`;
+    ${me.hasAccess ? '' : `<div class="cx-plan"><b>Biblioteca completa</b>Partituras que suenan, con loop y metrónomo, desde $5 al mes.<a href="#/ajustes/suscripcion">Ver planes →</a></div>`}`;
+  $('#meBtn').innerHTML = avatar(me);
   $('#tabs').innerHTML = `
     <a href="#/biblioteca" data-nav="biblioteca">${icon('book')}<span>Partituras</span></a>
     <a href="#/comunidad" data-nav="comunidad">${icon('feed')}<span>Inicio</span></a>
@@ -125,7 +125,7 @@ function paintShell() {
     <a href="#/notificaciones" data-nav="notificaciones">${icon('bell')}<span>Avisos</span><span class="badge" data-unread hidden></span></a>
     <a href="#/ajustes" data-nav="ajustes">${icon('settings')}<span>Ajustes</span></a>`;
   $('#meBtn').onclick = (e) => popMenu(e.currentTarget, [
-    { label: 'Mi perfil', icon: 'user', run: () => ctx.go(`#/perfil/${me.id}`) },
+    { label: me.name, icon: 'user', run: () => ctx.go(`#/perfil/${me.id}`) },
     { label: 'Editar perfil', icon: 'edit', run: () => ctx.go('#/editar-perfil') },
     { label: 'Ajustes', icon: 'settings', run: () => ctx.go('#/ajustes') },
     { label: me.hasAccess ? 'Mi suscripción' : 'Ver planes', icon: 'crown', run: () => ctx.go('#/ajustes/suscripcion') },
@@ -209,11 +209,26 @@ function bindDemo() {
   r.onclick = (e) => { e.preventDefault(); if (confirm('¿Borrar los datos de demostración de este navegador y empezar de cero?')) { store.resetDemo(); location.href = 'academia.html'; } };
 }
 
+/* Al bajar se esconden las barras para dar aire a la lectura; al subir vuelven. */
+function bindScrollBars() {
+  let last = window.scrollY, ticking = false;
+  addEventListener('scroll', () => {
+    if (ticking) return; ticking = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY, dy = y - last;
+      if (y < 80) document.body.classList.remove('hide-bars');
+      else if (dy > 6) document.body.classList.add('hide-bars');
+      else if (dy < -6) document.body.classList.remove('hide-bars');
+      last = y; ticking = false;
+    });
+  }, { passive: true });
+}
+
 async function boot() {
   try { me = await store.me(); } catch (e) { console.error(e); me = null; }
   if (!me) { location.replace('academia.html?next=campus.html'); return; }
   document.title = APP;
-  paintShell(); bindTop(); installer.watch();
+  paintShell(); bindTop(); installer.watch(); bindScrollBars();
   if (store.onNotify) unsubNotif = store.onNotify(() => refreshBadges());
   unreadTimer = setInterval(refreshBadges, 60000);
   window.addEventListener('hashchange', route);

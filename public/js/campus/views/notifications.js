@@ -7,8 +7,8 @@ const ICON = { broadcast: 'megaphone', reaction: 'heart', comment: 'comment', gr
 export async function renderNotifications(ctx, view) {
   ctx.setTitle('Notificaciones');
   view.innerHTML = `<div style="max-width:760px;margin:0 auto">
-    <div class="cx-h"><div><span class="eyebrow">Tu actividad</span><h1>Notificaciones</h1><p>Reacciones, comentarios, comunidades y avisos de Hosannia.</p></div>
-      <button class="btn btn-ghost btn-sm" id="all"><span>${icon('check')} Marcar todo como leído</span></button></div>
+    <div class="pg-head"><h1>Notificaciones</h1>
+      <button class="cx-iconbtn sm" id="all" title="Marcar todo como leído" aria-label="Marcar todo como leído">${icon('check')}</button></div>
     <div class="nt" id="nt"></div></div>`;
   const box = $('#nt', view);
   const load = async () => {

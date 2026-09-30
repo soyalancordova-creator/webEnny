@@ -473,6 +473,13 @@ export function createDemoStore() {
     },
     onNotify(cb) { listeners.notif.add(cb); return () => listeners.notif.delete(cb); },
 
+    /* ---------- contenido editable (banners, textos sueltos) ---------- */
+    async getContent(key) { return (db.content || {})[key] || null; },
+    async uploadBanner(img) { this._admin(); return (await saveImage(img)).url; },
+    async setContent(key, value) {
+      this._admin(); db.content = db.content || {}; db.content[key] = value; commit(); return value;
+    },
+
     /* ---------- biblioteca ---------- */
     async listCollections() { return db.collections.slice().sort((a, b) => a.position - b.position).map((c) => ({ ...c, count: db.scores.filter((s) => s.collection === c.id && s.published).length })); },
     async listScores({ q = '', instrument = '', level = '', collection = '', favorites = false } = {}) {

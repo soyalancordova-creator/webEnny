@@ -430,6 +430,23 @@ export function createSupaStore(sb, cfg = {}) {
       return () => sb.removeChannel(ch);
     },
 
+    /* ---------- contenido editable (banners, textos sueltos) ---------- */
+    async getContent(key) {
+      // site_content es de lectura publica; escribir exige rol admin (RLS)
+      const r = await q(sb.from('site_content').select('data').eq('key', key).maybeSingle());
+      return r ? r.data : null;
+    },
+    async uploadBanner(img) {
+      // el bucket 'community' es publico: sirve para imagenes que ven todos
+      const path = `banners/library.${ext(img.type)}`;
+      await upload('community', path, img.blob);
+      return sb.storage.from('community').getPublicUrl(path).data.publicUrl + '?v=' + Date.now();
+    },
+    async setContent(key, value) {
+      await q(sb.from('site_content').upsert({ key, data: value, updated_at: new Date().toISOString() }), 'Solo un administrador puede editar esto.');
+      return value;
+    },
+
     /* ---------- biblioteca ---------- */
     async listCollections() {
       const [cols, sc] = await Promise.all([q(sb.from('score_collections').select('*').order('position')), q(sb.from('scores').select('collection_id').eq('published', true))]);

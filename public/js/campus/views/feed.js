@@ -249,14 +249,8 @@ export async function renderFeed(ctx, view) {
   const [v, ref] = verseOfDay();
   view.innerHTML = `<div class="fd">
     <div class="fd-col">
-      <div class="cx-h" style="margin-bottom:.2rem"><div><span class="eyebrow">Comunidad</span><h1>Un lugar para crear y servir</h1>
-        <p>Comparte una reflexión, una pregunta o un pedido de oración con músicos que aman a Jesús.</p></div></div>
       <div id="stories"></div>
       <div id="cmpHost"></div>
-      <div class="cx-row" id="filters">
-        <button class="cx-chip on" data-t="">Todo</button>
-        ${Object.entries(TYPES).map(([k, t]) => `<button class="cx-chip" data-t="${k}">${icon(t.ic)}${t.label}</button>`).join('')}
-      </div>
       <div class="fd-col" id="list"></div>
     </div>
     <aside class="fd-rail">
@@ -269,7 +263,6 @@ export async function renderFeed(ctx, view) {
   let type = '';
   import('./stories.js').then((m) => m.mountStoryRail(ctx, $('#stories', view))).catch(() => {});
   $('#cmpHost', view).appendChild(composer(ctx, { onPosted: (p) => { if (!type || p.type === type) prependPost(list, p, ctx); } }));
-  $$('#filters [data-t]', view).forEach((b) => { b.onclick = () => { type = b.dataset.t; $$('#filters .cx-chip', view).forEach((x) => x.classList.toggle('on', x === b)); mountList(list, ctx, { type: type || null }); }; });
   mountList(list, ctx, {});
 
   ctx.store.listGroups({ mine: true }).then((gs) => {
@@ -293,6 +286,6 @@ export async function renderPost(ctx, view, [id]) {
 
 export async function renderSaved(ctx, view) {
   ctx.setTitle('Guardados');
-  view.innerHTML = `<div style="max-width:680px;margin:0 auto"><div class="cx-h"><div><span class="eyebrow">Solo tú lo ves</span><h1>Guardados</h1><p>Publicaciones que quieres volver a leer.</p></div></div><div class="fd-col" id="list"></div></div>`;
+  view.innerHTML = `<div style="max-width:680px;margin:0 auto"><div class="pg-head"><h1>Guardados</h1></div><div class="fd-col" id="list"></div></div>`;
   await mountList($('#list', view), ctx, { saved: true }, 'Todavía no guardas nada. Usa "Guardar" en cualquier publicación.');
 }

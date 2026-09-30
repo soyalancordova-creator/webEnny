@@ -7,8 +7,9 @@
 import { icon } from '../icons.js';
 import { $, $$, esc, ago, avatar, toast, modal, confirmBox, loading, empty, fmtTime } from '../ui.js';
 import { ScoreEngine, youtubeId } from '../score-engine.js';
+import { compressImage } from '../media.js';
 
-const TABS = [['', 'Resumen', 'feed'], ['partituras', 'Partituras', 'music'], ['colecciones', 'Colecciones', 'book'], ['avisos', 'Avisos', 'megaphone'], ['moderacion', 'Moderación', 'flag'], ['alumnos', 'Alumnos', 'users']];
+const TABS = [['', 'Resumen', 'feed'], ['partituras', 'Partituras', 'music'], ['banner', 'Banner', 'image'], ['colecciones', 'Colecciones', 'book'], ['avisos', 'Avisos', 'megaphone'], ['moderacion', 'Moderación', 'flag'], ['alumnos', 'Alumnos', 'users']];
 
 export async function renderAdmin(ctx, view, [tab = '', sub]) {
   ctx.setTitle('Panel de Hosannia');
@@ -20,11 +21,58 @@ export async function renderAdmin(ctx, view, [tab = '', sub]) {
   $$('[data-t]', view).forEach((b) => { b.onclick = () => ctx.go(`#/admin${b.dataset.t ? '/' + b.dataset.t : ''}`); });
   const el = $('#ab', view);
   if (tab === 'partituras') return sub ? scoreEditor(ctx, el, sub) : scoresTab(ctx, el);
+  if (tab === 'banner') return bannerTab(ctx, el);
   if (tab === 'colecciones') return collectionsTab(ctx, el);
   if (tab === 'avisos') return broadcastTab(ctx, el);
   if (tab === 'moderacion') return moderationTab(ctx, el);
   if (tab === 'alumnos') return usersTab(ctx, el);
   return overview(ctx, el);
+}
+
+/* ---------- banner de la biblioteca ---------- */
+async function bannerTab(ctx, el) {
+  loading(el);
+  let b = {};
+  try { b = (await ctx.store.getContent('library_banner')) || {}; } catch (_) {}
+  let img = null;
+  el.innerHTML = `<section class="cx-card cx-pad set-card">
+      <h3>${icon('image')} Banner de la biblioteca</h3>
+      <p class="muted">La imagen ancha que ven los alumnos arriba de las partituras. Se recomienda 1600×500 px.</p>
+      <label class="st-drop" id="bDrop" style="min-height:160px">
+        <input type="file" accept="image/*" hidden id="bFile">
+        <div class="ph" id="bPh">${icon('image')}<b>Elegir imagen</b><small>Se comprime sola antes de subir</small></div>
+        <img id="bPrev"${b.image ? ` src="${esc(b.image)}"` : ' hidden'} alt="">
+      </label>
+      <div class="two" style="margin-top:.9rem">
+        <div class="fld"><label>Título (opcional)</label><input id="bT" maxlength="80" value="${esc(b.title || '')}" placeholder="Ej. Himnos para este domingo"></div>
+        <div class="fld"><label>Subtítulo (opcional)</label><input id="bS" maxlength="120" value="${esc(b.subtitle || '')}"></div>
+      </div>
+      <div class="fld"><label>Enlace al tocarlo (opcional)</label><input id="bL" maxlength="200" value="${esc(b.link || '')}" placeholder="#/biblioteca?col=col-himnos"></div>
+      <div class="cx-row" style="justify-content:space-between;margin-top:1rem">
+        <button class="btn btn-ghost btn-sm" id="bDel"><span>${icon('trash')} Quitar banner</span></button>
+        <button class="btn btn-fill btn-sm" id="bSave"><span>Guardar banner</span></button></div>
+    </section>`;
+  const file = $('#bFile', el);
+  $('#bDrop', el).onclick = (e) => { if (e.target !== file) file.click(); };
+  file.onchange = async () => {
+    const f = file.files[0]; if (!f) return;
+    try {
+      img = await compressImage(f, { maxSide: 1800, quality: 0.82 });
+      const p = $('#bPrev', el); p.src = URL.createObjectURL(img.blob); p.hidden = false; $('#bPh', el).hidden = true;
+    } catch (err) { toast(err.message); }
+  };
+  $('#bSave', el).onclick = async () => {
+    try {
+      const image = img ? await ctx.store.uploadBanner(img) : b.image || '';
+      if (!image) { toast('Elige una imagen primero.'); return; }
+      await ctx.store.setContent('library_banner', { image, title: $('#bT', el).value.trim(), subtitle: $('#bS', el).value.trim(), link: $('#bL', el).value.trim() });
+      toast('Banner guardado.'); bannerTab(ctx, el);
+    } catch (e) { toast(e.message); }
+  };
+  $('#bDel', el).onclick = async () => {
+    if (!(await confirmBox('¿Quitar el banner de la biblioteca?', 'Quitar'))) return;
+    try { await ctx.store.setContent('library_banner', {}); toast('Banner quitado.'); bannerTab(ctx, el); } catch (e) { toast(e.message); }
+  };
 }
 
 async function overview(ctx, el) {
