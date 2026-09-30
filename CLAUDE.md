@@ -1,6 +1,8 @@
-# Enny Toro · Sitio + Academia
+# Enny Toro · Sitio + Hosannia
 
-Sitio de Enny Toro, violinista en Guayaquil, más la plataforma de su academia.
+Dos productos en un repo: el **sitio de Enny Toro** (violinista en Guayaquil) y **Hosannia**,
+la herramienta de partituras con comunidad. El sitio manda a la gente a Hosannia; Hosannia tendrá
+su propio dominio (`HOSANNIA_URL` en config.js reapunta todos los enlaces `data-hos`).
 Web estática (HTML + CSS + JS, sin framework ni build) sobre **Supabase** (auth, base de datos, storage),
 desplegada en **Vercel**. No usar "de Córdova" en el sitio.
 
@@ -11,12 +13,13 @@ desplegada en **Vercel**. No usar "de Córdova" en el sitio.
   resolver `index.html` para `/` automáticamente (muestra listado de archivos) a menos que el rewrite
   esté explícito. Si `npm run dev` muestra "Files within enny-violin" en vez del sitio, es esto.
 - No hay build: Vercel publica los archivos tal cual.
-- `npm run test:rls` — 82 pruebas de RLS contra Postgres real en WASM (PGlite), con un stub de
+- `npm run test:rls` — 105 pruebas de RLS contra Postgres real en WASM (PGlite), con un stub de
   Supabase (`auth.uid()`, roles, storage). Correrlo después de tocar cualquier policy de
   `supabase/campus.sql`. `CAMPUS_SQL=ruta.sql` prueba otra versión del SQL (útil para mutaciones).
 
-## Campus (`campus.html`)
-Red social + biblioteca de partituras + suscripciones. SPA por hash (`#/comunidad`, `#/biblioteca`,
+## Hosannia (`campus.html`, acceso por `academia.html`)
+Biblioteca de partituras + red social + suscripciones. **La herramienta es la entrada**: `#/` abre
+la biblioteca; la comunidad va después. SPA por hash (`#/comunidad`, `#/biblioteca`,
 `#/obra/:id`, `#/comunidad/:id/chat`, `#/planes`, `#/admin/...`) en ES modules sin build:
 `public/js/campus/main.js` (router, shell) + `views/*.js` (cargadas bajo demanda) + `public/css/campus.css`.
 - **Dos stores con la misma interfaz**: `store-supa.js` (Supabase real) y `store-demo.js`
@@ -32,6 +35,25 @@ Red social + biblioteca de partituras + suscripciones. SPA por hash (`#/comunida
 - Esquema: `supabase/campus.sql`, se ejecuta **después** de `schema.sql`. Notificaciones personales
   solo por triggers; rate limit por trigger; la edad nunca sale en `public_profiles`.
 - Fotos: se comprimen en el navegador (`media.js`, WebP/JPEG, sin EXIF/GPS) antes de subir.
+- **Vocabulario**: seguir = *acompañar*; unirse a una iglesia = *congregarse* (`kind: 'iglesia'`).
+- **Historias**: duran 24 h, las ven quienes te acompañan (y las de la docente siempre). Carrusel en
+  el inicio (`views/stories.js`), visor a pantalla completa. En SQL las filtra `can_see_story()`.
+- **Ajustes** (`views/settings.js`): cuenta, suscripción (ahí vive `plans.js`), instalar la app y
+  preguntas frecuentes. La suscripción ya no tiene entrada propia en el menú.
+- Cada comunidad edita sus datos (dirección, horarios, contacto) y decide qué se ve desde fuera;
+  el front lee siempre de la vista `communities_public`, que tapa lo oculto.
+- **App instalable**: `manifest.webmanifest` + `sw.js` (solo cachea el armazón, nunca datos ni
+  partituras) + `public/js/campus/pwa.js` (botón de instalar en el acceso y en Ajustes).
+
+## Marca Hosannia
+- `public/css/hosannia.css` redefine los tokens de brand.css: azul noche `#0D1321`, rojo `#B0192E`,
+  marfil `#F7F4EF`, gris `#E6E7EA`, dorado `#D4AF37`, Montserrat y vidrio líquido. Se carga **después**
+  de brand.css en `campus.html`, `academia.html`, `terminos.html` y `privacidad.html`.
+- Logotipo oficial en `public/img/`: `hosannia-mark.png` (rojo), `hosannia-mark-white.png`,
+  `hosannia-logo.png` (palabra), `hosannia-logo-white.png`, iconos de app y `favicon.ico`.
+  Los originales que entregó el usuario están en `public/img/marca/`. Los iconos se regeneran con
+  Pillow desde la marca (ver el commit de Hosannia).
+- El sitio de Enny conserva su marfil y vino: brand.css no se tocó.
 
 ## Pagos (PayPal Subscriptions)
 - Front: botones del SDK en `views/plans.js` con `custom_id = user.id`.
@@ -49,8 +71,9 @@ Red social + biblioteca de partituras + suscripciones. SPA por hash (`#/comunida
 | `index.html` | One-page: hero, video con scroll, stats, sobre mí, servicios, galería, blog, contacto | público |
 | `blog.html` | Todos los artículos, con filtro por categoría | público |
 | `articulo.html` | Un artículo. Lee `?slug=…` (y `#slug=…` de respaldo) | público |
-| `academia.html` | Login / registro / verificación por código | público |
-| `campus.html` | Campus del alumno: perfil, biblioteca, proyectos, comunidad | requiere sesión |
+| `academia.html` | Acceso a Hosannia: login / registro / verificación por código | público |
+| `campus.html` | Hosannia: biblioteca, reproductor, comunidad, historias, ajustes | requiere sesión |
+| `terminos.html` · `privacidad.html` | Documentos legales de Hosannia | público |
 | `admin.html` | Panel: edita todo el contenido del sitio y ve los alumnos | requiere rol `admin` |
 
 ## Archivos compartidos
