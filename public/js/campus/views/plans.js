@@ -13,7 +13,7 @@ import { $, $$, esc, toast, confirmBox } from '../ui.js';
 export const PLANS = [
   { id: 'mensual', name: 'Mensual', price: 5.99, per: '/mes', months: 1, note: 'Flexibilidad total', save: '' },
   { id: 'trimestral', name: 'Trimestral', price: 15.99, per: '/3 meses', months: 3, note: '≈ $5.33 al mes', save: 'Ahorras 11%' },
-  { id: 'anual', name: 'Anual', price: 59.99, per: '/año', months: 12, note: '≈ $5.00 al mes', save: 'Ahorras 17% · 2 meses gratis', best: true },
+  { id: 'anual', name: 'Anual', price: 59.99, per: '/año', months: 12, note: '≈ $5.00 al mes', save: 'Ahorras $11.89 · 2 meses gratis', best: true },
 ];
 const FEATURES = [
   'Toda la biblioteca de partituras',
@@ -37,7 +37,7 @@ function loadPayPal(clientId) {
   return sdkLoading;
 }
 
-export async function renderPlans(ctx, view) {
+export async function renderPlans(ctx, view, opts = {}) {
   ctx.setTitle('Planes');
   const me = await ctx.refreshMe();
   const sub = me.subscription;
@@ -53,12 +53,12 @@ export async function renderPlans(ctx, view) {
     </section>` : '';
 
   view.innerHTML = `<div style="max-width:1100px;margin:0 auto">
-    <div class="cx-h" style="justify-content:center;text-align:center"><div><span class="eyebrow">Suscripción</span><h1>Toda la biblioteca, siempre contigo</h1>
-      <p style="max-width:52ch;margin-inline:auto">La comunidad es gratis para siempre. La suscripción abre las partituras, el reproductor y las grabaciones.</p></div></div>
+    ${opts.sinTitulo ? '' : `<div class="cx-h" style="justify-content:center;text-align:center"><div><span class="eyebrow">Suscripción</span><h1>Toda la biblioteca, siempre contigo</h1>
+      <p style="max-width:52ch;margin-inline:auto">La comunidad es gratis para siempre. La suscripción abre las partituras, el reproductor y las grabaciones.</p></div></div>`}
     ${current}
     ${me.isAdmin ? '<p class="center muted" style="margin-bottom:1.4rem">Eres administradora: ya tienes acceso completo.</p>' : ''}
     <div class="plans">${PLANS.map((p) => `<article class="plan${p.best ? ' best' : ''}" data-p="${p.id}">
-      ${p.best ? '<span class="tag-best">Mejor precio</span>' : ''}
+      ${p.best ? '<span class="tag-best">El que más conviene</span>' : ''}
       <h3>${p.name}</h3><span class="muted" style="font-size:.84rem">${p.note}</span>
       <div class="price"><b>$${p.price.toFixed(2)}</b><span>${p.per}</span></div>
       <div class="save">${p.save}</div>
@@ -69,6 +69,9 @@ export async function renderPlans(ctx, view) {
         : paypalReady ? '<div class="spin"></div>' : '<p class="muted" style="font-size:.84rem;text-align:center">Los pagos se están configurando. Escríbenos por WhatsApp para suscribirte.</p>'}</div>
     </article>`).join('')}</div>
     ${!sub && !me.isAdmin ? '<p class="center" style="margin-top:1.4rem"><a href="#/comunidad" class="cx-chip">Por ahora, seguir con la cuenta gratuita →</a></p>' : ''}
+    ${sub ? '' : `<p class="center muted" style="margin-top:1.1rem;font-size:.86rem;max-width:48ch;margin-inline:auto">
+      Con el plan anual pagas <b style="color:var(--ink)">$59.99</b> en vez de <b style="color:var(--ink)">$71.88</b>: son
+      <b style="color:var(--wine)">dos meses de regalo</b> y un solo cobro al año.</p>`}
     <div class="trust"><span>${icon('shield')}Pago seguro con PayPal · tarjeta de crédito o débito</span><span>${icon('check')}Cancela cuando quieras</span><span>${icon('card')}Precios en USD</span></div>
     ${demo ? '<p class="center muted" style="margin-top:1rem;font-size:.8rem">Modo demostración: no se cobra nada. En producción el pago lo procesa PayPal y lo verifica nuestro servidor.</p>' : ''}
   </div>`;

@@ -292,7 +292,7 @@ var next = new URLSearchParams(location.search).get('next') || '';
 /* Todos entran a la plataforma; quien acaba de crear su cuenta ve primero los planes. */
 function irAdentro(perfil, nuevo) {
   if (next && /^[a-z0-9_-]+\.html$/i.test(next)) { location.href = next; return; }
-  location.href = nuevo ? 'campus.html#/ajustes/suscripcion' : 'campus.html';
+  location.href = nuevo ? 'campus.html#/primeros-pasos' : 'campus.html';
 }
 if (A.listo) {
   A.perfil().then(function (p) { if (p) irAdentro(p); });
@@ -406,7 +406,7 @@ document.getElementById('fReg').addEventListener('submit', function (ev) {
   cargando(btn, true);
   A.sb.auth.signUp({
     email: correo, password: p1,
-    options: { data: { full_name: nombre, age: edad }, emailRedirectTo: location.origin + '/campus.html#/ajustes/suscripcion' }
+    options: { data: { full_name: nombre, age: edad }, emailRedirectTo: location.origin + '/campus.html#/primeros-pasos' }
   }).then(function (r) {
     cargando(btn, false, 'Crear mi cuenta');
     if (r.error) return A.aviso(msg, traducir(r.error), 'err');

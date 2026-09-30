@@ -44,6 +44,7 @@ const ROUTES = [
   { re: /^#\/planes$/, view: 'plans', nav: 'ajustes' },
   { re: /^#\/buscar(?:\?q=(.*))?$/, view: 'search', nav: 'buscar' },
   { re: /^#\/crear$/, view: 'compose', nav: 'crear', full: true },
+  { re: /^#\/primeros-pasos(?:\/(\w+))?$/, view: 'onboarding', nav: '', full: true, limpio: true },
   { re: /^#\/grupos$/, view: 'grupos', nav: 'grupos' },
   { re: /^#\/admin(?:\/(partituras|colecciones|avisos|moderacion|alumnos))?(?:\/([\w-]+))?$/, view: 'admin', nav: 'admin', admin: true },
 ];
@@ -66,6 +67,7 @@ const LOADERS = {
   plans: () => import('./views/plans.js').then((m) => m.renderPlans),
   search: () => import('./views/search.js').then((m) => m.renderSearch),
   compose: () => import('./views/compose.js').then((m) => m.renderCompose),
+  onboarding: () => import('./views/onboarding.js').then((m) => m.renderOnboarding),
   admin: () => import('./views/admin.js').then((m) => m.renderAdmin),
 };
 
@@ -87,6 +89,7 @@ async function route() {
   $$('.cx-nav a, .cx-tabs a').forEach((a) => a.classList.toggle('on', a.dataset.nav === r.nav));
   if (r.admin && !me.isAdmin) { ctx.go('#/'); return; }
   view.className = 'cx-view' + (r.full ? ' full' : '');
+  document.body.classList.toggle('solo', !!r.limpio);
   view.innerHTML = '<div class="cx-empty"><span class="spin"></span></div>';
   window.scrollTo(0, 0);
   try {

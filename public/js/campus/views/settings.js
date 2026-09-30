@@ -43,7 +43,7 @@ export async function renderSettings(ctx, view, [tab]) {
   if (cur === 'suscripcion') {
     body.innerHTML = '<div class="cx-empty"><span class="spin"></span></div>';
     const { renderPlans } = await import('./plans.js');
-    await renderPlans(ctx, body);
+    await renderPlans(ctx, body, { sinTitulo: true });
     ctx.setTitle('Suscripción');
   }
 }
