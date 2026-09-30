@@ -41,7 +41,9 @@ const ROUTES = [
   { re: /^#\/notificaciones$/, view: 'notifications', nav: 'notificaciones' },
   { re: /^#\/ajustes(?:\/(suscripcion|ayuda|cuenta|app))?$/, view: 'settings', nav: 'ajustes' },
   { re: /^#\/planes$/, view: 'plans', nav: 'ajustes' },
-  { re: /^#\/buscar\?q=(.*)$/, view: 'search', nav: '' },
+  { re: /^#\/buscar(?:\?q=(.*))?$/, view: 'search', nav: 'buscar' },
+  { re: /^#\/crear$/, view: 'compose', nav: 'crear', full: true },
+  { re: /^#\/grupos$/, view: 'groups', nav: 'grupos' },
   { re: /^#\/admin(?:\/(partituras|colecciones|avisos|moderacion|alumnos))?(?:\/([\w-]+))?$/, view: 'admin', nav: 'admin', admin: true },
 ];
 
@@ -61,6 +63,7 @@ const LOADERS = {
   settings: () => import('./views/settings.js').then((m) => m.renderSettings),
   plans: () => import('./views/plans.js').then((m) => m.renderPlans),
   search: () => import('./views/search.js').then((m) => m.renderSearch),
+  compose: () => import('./views/compose.js').then((m) => m.renderCompose),
   admin: () => import('./views/admin.js').then((m) => m.renderAdmin),
 };
 
@@ -94,48 +97,82 @@ async function route() {
 }
 
 /* ---------- shell ---------- */
-function navLinks() {
-  const L = (href, nav, ic, label, badge = '') => `<a href="${href}" data-nav="${nav}">${icon(ic)}<span>${label}</span>${badge}</a>`;
-  return `
-    <span class="grp">Herramienta</span>
-    ${L('#/biblioteca', 'biblioteca', 'book', 'Biblioteca')}
-    ${L('#/favoritos', 'favoritos', 'heart', 'Mis partituras')}
-    <span class="grp">Comunidad</span>
-    ${L('#/comunidad', 'comunidad', 'feed', 'Inicio')}
-    ${L('#/comunidades', 'comunidades', 'users', 'Comunidades')}
-    ${L('#/guardados', 'guardados', 'bookmark', 'Guardados')}
-    ${L('#/notificaciones', 'notificaciones', 'bell', 'Notificaciones', '<span class="badge" data-unread hidden></span>')}
-    <span class="grp">Mi cuenta</span>
-    ${L(`#/perfil/${me.id}`, 'perfil', 'user', 'Mi perfil')}
-    ${L('#/ajustes', 'ajustes', 'settings', 'Ajustes')}
-    ${me.isAdmin ? `<span class="grp">Administración</span>${L('#/admin', 'admin', 'shield', 'Panel de Hosannia')}<a href="admin.html">${icon('home')}<span>Sitio de Enny</span></a>` : ''}`;
+/* Riel de iconos (escritorio) + panel con etiquetas, al estilo de la referencia. */
+const MENU = [
+  { grp: 'Herramienta' },
+  { href: '#/biblioteca', nav: 'biblioteca', ic: 'book', label: 'Biblioteca', rail: true },
+  { href: '#/favoritos', nav: 'favoritos', ic: 'heart', label: 'Mis partituras', rail: true },
+  { grp: 'Comunidad' },
+  { href: '#/comunidad', nav: 'comunidad', ic: 'feed', label: 'Inicio', rail: true },
+  { href: '#/comunidades', nav: 'comunidades', ic: 'users', label: 'Comunidades', rail: true },
+  { href: '#/grupos', nav: 'grupos', ic: 'comment', label: 'Grupos', rail: true },
+  { href: '#/guardados', nav: 'guardados', ic: 'bookmark', label: 'Guardados' },
+  { href: '#/notificaciones', nav: 'notificaciones', ic: 'bell', label: 'Notificaciones', badge: true },
+  { sep: true },
+  { href: '#/ajustes', nav: 'ajustes', ic: 'settings', label: 'Ajustes', rail: true, foot: true },
+];
+
+function menuHTML() {
+  const admin = me.isAdmin
+    ? `<span class="grp">Administración</span>
+       <a href="#/admin" data-nav="admin">${icon('shield')}<span>Panel de Hosannia</span><i class="nv-ch">${icon('chevR')}</i></a>
+       <a href="admin.html">${icon('home')}<span>Sitio de Enny</span><i class="nv-ch">${icon('chevR')}</i></a>` : '';
+  return MENU.map((m) => {
+    if (m.grp) return `<span class="grp">${m.grp}</span>`;
+    if (m.sep) return '<hr class="sep">';
+    const badge = m.badge ? '<span class="badge" data-unread hidden></span>' : '';
+    return `<a href="${m.href}" data-nav="${m.nav}">${icon(m.ic)}<span>${m.label}</span>${badge}<i class="nv-ch">${icon('chevR')}</i></a>`;
+  }).join('') + admin;
+}
+
+function railHTML() {
+  const top = MENU.filter((m) => m.rail && !m.foot);
+  const foot = MENU.filter((m) => m.rail && m.foot);
+  const btn = (m) => `<a href="${m.href}" data-nav="${m.nav}" title="${m.label}" aria-label="${m.label}">${icon(m.ic)}</a>`;
+  return `<a class="rl-logo" href="#/" aria-label="${esc(APP)}">${markSvg('hs-mark', true)}</a>
+    <nav class="rl-nav">${top.map(btn).join('')}</nav>
+    <div class="rl-foot"><nav class="rl-nav">${foot.map(btn).join('')}</nav>
+      <button class="rl-av" id="railAv" aria-label="Tu perfil">${avatar(me)}</button></div>`;
 }
 
 function paintShell() {
+  $('#rail').innerHTML = railHTML();
   $('#side').innerHTML = `
-    <a class="cx-brand hs-logo" href="#/" aria-label="${esc(APP)}">${markSvg('hs-mark', true)}<span class="hs-word">${esc(APP.toUpperCase())}</span></a>
-    <nav class="cx-nav" aria-label="Principal">${navLinks()}</nav>
+    <div class="sd-head">
+      <a class="cx-brand hs-logo" href="#/" aria-label="${esc(APP)}">${markSvg('hs-mark', true)}<span class="hs-word">${esc(APP.toUpperCase())}</span></a>
+      <button class="cx-iconbtn sm sd-x" id="sideX" aria-label="Cerrar menú">${icon('x')}</button>
+    </div>
+    <nav class="cx-nav" aria-label="Principal">${menuHTML()}</nav>
     ${demoCard()}
-    ${me.hasAccess ? '' : `<div class="cx-plan"><b>Biblioteca completa</b>Partituras que suenan, con loop y metrónomo, desde $5 al mes.<a href="#/ajustes/suscripcion">Ver planes →</a></div>`}`;
-  $('#meBtn').innerHTML = avatar(me);
+    ${me.hasAccess ? '' : `<div class="cx-plan"><b>Biblioteca completa</b>Partituras que suenan, con loop y metrónomo, desde $5 al mes.<a href="#/ajustes/suscripcion">Ver planes →</a></div>`}
+    <a class="sd-me" href="#/perfil/${esc(me.id)}">${avatar(me)}<div style="min-width:0"><b>${esc(me.name)}</b><span>${me.isAdmin ? 'Administradora' : me.hasAccess ? 'Suscripción activa' : 'Cuenta gratuita'}</span></div><i class="nv-ch">${icon('chevR')}</i></a>`;
+
+  /* barra inferior: partituras · inicio · crear · buscar · perfil */
   $('#tabs').innerHTML = `
-    <a href="#/biblioteca" data-nav="biblioteca">${icon('book')}<span>Partituras</span></a>
-    <a href="#/comunidad" data-nav="comunidad">${icon('feed')}<span>Inicio</span></a>
-    <a href="#/comunidades" data-nav="comunidades">${icon('users')}<span>Grupos</span></a>
-    <a href="#/notificaciones" data-nav="notificaciones">${icon('bell')}<span>Avisos</span><span class="badge" data-unread hidden></span></a>
-    <a href="#/ajustes" data-nav="ajustes">${icon('settings')}<span>Ajustes</span></a>`;
-  $('#meBtn').onclick = (e) => popMenu(e.currentTarget, [
+    <a href="#/biblioteca" data-nav="biblioteca"><i>${icon('book')}</i><span>Partituras</span></a>
+    <a href="#/comunidad" data-nav="comunidad"><i>${icon('feed')}</i><span>Inicio</span></a>
+    <a href="#/crear" data-nav="crear" class="mk" aria-label="Crear publicación"><i>${icon('plus')}</i><span>Crear</span></a>
+    <a href="#/buscar" data-nav="buscar"><i>${icon('search')}</i><span>Buscar</span></a>
+    <a href="#/perfil/${esc(me.id)}" data-nav="perfil"><i>${avatar(me, 'tab')}</i><span>Perfil</span></a>`;
+
+  $('#railAv').onclick = (e) => popMenu(e.currentTarget, [
     { label: me.name, icon: 'user', run: () => ctx.go(`#/perfil/${me.id}`) },
     { label: 'Editar perfil', icon: 'edit', run: () => ctx.go('#/editar-perfil') },
     { label: 'Ajustes', icon: 'settings', run: () => ctx.go('#/ajustes') },
     { label: me.hasAccess ? 'Mi suscripción' : 'Ver planes', icon: 'crown', run: () => ctx.go('#/ajustes/suscripcion') },
     { label: 'Cerrar sesión', icon: 'logout', danger: true, run: signOut },
   ]);
+  $('#sideX').onclick = closeNav;
+  $$('.cx-nav a, .rl-nav a', $('#side').parentElement).forEach((a) => { a.addEventListener('click', closeNav); });
+
   const cur = ROUTES.find((x) => x.re.test(location.hash || '#/'));
-  if (cur) $$('.cx-nav a, .cx-tabs a').forEach((a) => a.classList.toggle('on', a.dataset.nav === cur.nav));
+  if (cur) $$('.cx-nav a, .cx-tabs a, .rl-nav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === cur.nav));
   bindDemo();
   refreshBadges();
 }
+
+function openNav() { document.body.classList.add('nav-open'); $('#scrim').hidden = false; }
+function closeNav() { document.body.classList.remove('nav-open'); $('#scrim').hidden = true; }
 
 async function refreshBadges() {
   try {
@@ -150,53 +187,16 @@ async function signOut() {
   location.href = 'academia.html';
 }
 
-/* ---------- barra superior: buscador con sugerencias ---------- */
+/* ---------- barra superior: menú, logotipo y avisos ---------- */
 function bindTop() {
-  $('#hamb').onclick = () => document.body.classList.toggle('nav-open');
+  $('#hamb').onclick = () => (document.body.classList.contains('nav-open') ? closeNav() : openNav());
+  $('#scrim').onclick = closeNav;
   $('#bell').onclick = () => ctx.go('#/notificaciones');
-  const root = document.documentElement;
-  const paintTheme = () => { $('#themeBtn').innerHTML = icon(root.dataset.theme === 'dark' ? 'sun' : 'moon'); };
-  $('#themeBtn').onclick = () => {
-    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('enny-theme', root.dataset.theme); } catch (_) {}
-    paintTheme();
-  };
-  paintTheme();
-
-  const f = $('#searchForm'), input = $('#searchInput'), box = $('#searchSugg');
-  const close = () => { box.hidden = true; box.innerHTML = ''; };
-  const submit = () => { const v = input.value.trim(); if (v) { close(); input.blur(); ctx.go(`#/buscar?q=${encodeURIComponent(v)}`); } };
-  f.onsubmit = (e) => { e.preventDefault(); submit(); };
-
-  let t = 0, token = 0;
-  input.oninput = () => {
-    const q = input.value.trim();
-    clearTimeout(t);
-    if (q.length < 2) { close(); return; }
-    t = setTimeout(async () => {
-      const mine = ++token;
-      const [scores, people, groups] = await Promise.all([
-        store.listScores({ q }).catch(() => []), store.searchPeople(q).catch(() => []), store.listGroups({ q }).catch(() => []),
-      ]);
-      if (mine !== token) return;
-      const row = (href, ic, title, sub) => `<a href="${href}" data-sugg>${ic}<div><b>${esc(title)}</b><small>${esc(sub)}</small></div></a>`;
-      const html = [
-        ...scores.slice(0, 4).map((s) => row(`#/obra/${s.id}`, icon('music'), s.title, `${s.composer} · ${s.instrument}`)),
-        ...people.slice(0, 3).map((p) => row(`#/perfil/${p.id}`, avatar(p, 'xs'), p.name, p.service || 'Integrante')),
-        ...groups.slice(0, 3).map((g) => row(`#/comunidad/${g.id}`, icon('users'), g.name, `${g.members} integrantes`)),
-      ].join('');
-      box.innerHTML = html ? html + `<a href="#/buscar?q=${encodeURIComponent(q)}" data-sugg class="all">${icon('search')}<div><b>Ver todos los resultados de “${esc(q)}”</b></div></a>`
-        : `<p class="none">Nada coincide con “${esc(q)}”.</p>`;
-      box.hidden = false;
-      $$('[data-sugg]', box).forEach((a) => { a.onclick = () => { close(); input.value = ''; }; });
-    }, 220);
-  };
-  input.onkeydown = (e) => { if (e.key === 'Escape') { close(); input.blur(); } };
-  document.addEventListener('click', (e) => { if (!e.target.closest('#searchForm')) close(); });
+  // el tema ahora vive en Ajustes; aquí solo se respeta lo guardado
   document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); input.focus(); }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); ctx.go('#/buscar'); }
+    if (e.key === 'Escape') closeNav();
   });
-  document.addEventListener('click', (e) => { if (document.body.classList.contains('nav-open') && !e.target.closest('#side') && !e.target.closest('#hamb')) document.body.classList.remove('nav-open'); });
 }
 
 function demoCard() {

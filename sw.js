@@ -6,12 +6,13 @@
    NUNCA guarda datos de Supabase ni archivos de partituras: esos
    son privados y van siempre a la red.
 ============================================================ */
-const CACHE = 'hosannia-v1';
+const CACHE = 'hosannia-v2';
 const SHELL = [
   'campus.html', 'academia.html', 'manifest.webmanifest',
   'public/css/brand.css', 'public/css/hosannia.css', 'public/css/campus.css',
   'public/js/config.js', 'public/js/app.js', 'public/js/campus/main.js',
   'public/img/hosannia-mark.png', 'public/img/hosannia-mark-white.png', 'public/img/hosannia-icon-192.png',
+  'public/img/hosannia-logo.png', 'public/img/hosannia-logo-dark.png', 'public/img/hosannia-appicon.png',
 ];
 
 self.addEventListener('install', (e) => {

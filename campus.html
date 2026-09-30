@@ -22,20 +22,19 @@
 </head>
 <body class="cx-body">
 <div class="cx">
+  <!-- riel de iconos siempre visible (escritorio) -->
+  <aside class="cx-rail" id="rail" aria-label="Accesos"></aside>
+  <!-- panel con etiquetas: fijo en escritorio, deslizante en móvil -->
   <aside class="cx-side" id="side" aria-label="Navegación"></aside>
+  <div class="cx-scrim" id="scrim" hidden></div>
   <main class="cx-main">
     <header class="cx-top">
-      <button class="cx-iconbtn cx-hamb" id="hamb" aria-label="Menú"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-      <form class="cx-search" id="searchForm" role="search" autocomplete="off">
-        <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
-        <input id="searchInput" placeholder="Busca partituras, comunidades o personas" aria-label="Buscar" autocomplete="off">
-        <kbd>Ctrl K</kbd>
-        <div class="cx-sugg" id="searchSugg" hidden></div>
-      </form>
-      <span class="sp"></span>
-      <button class="cx-iconbtn" id="themeBtn" aria-label="Cambiar tema"></button>
+      <button class="cx-iconbtn" id="hamb" aria-label="Menú"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <a class="cx-toplogo" href="#/" aria-label="Hosannia">
+        <img class="lg-light" src="public/img/hosannia-logo.png" alt="Hosannia">
+        <img class="lg-dark" src="public/img/hosannia-logo-dark.png" alt="Hosannia">
+      </a>
       <button class="cx-iconbtn" id="bell" aria-label="Notificaciones"><svg class="ic" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2H4.5z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="dot" id="bellDot" hidden></span></button>
-      <button class="cx-avbtn" id="meBtn" aria-label="Tu perfil"></button>
     </header>
     <div class="cx-view" id="view" tabindex="-1"><div class="cx-empty"><span class="spin"></span></div></div>
   </main>

@@ -50,7 +50,14 @@ export async function renderSettings(ctx, view, [tab]) {
 
 /* ---------- cuenta ---------- */
 function paintAccount(ctx, body, me) {
+  const oscuro = document.documentElement.dataset.theme === 'dark';
   body.innerHTML = `<section class="cx-card cx-pad set-card">
+      <h3>${icon(oscuro ? 'moon' : 'sun')} Apariencia</h3>
+      <div class="set-row"><div><b>Tema ${oscuro ? 'oscuro' : 'claro'}</b>
+        <small>${oscuro ? 'Fondo azul noche, más cómodo para practicar de noche.' : 'Fondo marfil, con buen contraste de día.'}</small></div>
+        <button class="sw${oscuro ? ' on' : ''}" id="themeSw" role="switch" aria-checked="${oscuro}" aria-label="Tema oscuro"></button></div>
+    </section>
+    <section class="cx-card cx-pad set-card">
       <h3>${icon('user')} Perfil</h3>
       <p class="muted">Tu nombre, foto, iglesia y cómo sirves. Es lo que ven las demás personas.</p>
       <div class="cx-row"><a class="btn btn-fill btn-sm" href="#/editar-perfil"><span>Editar mi perfil</span></a>
@@ -75,6 +82,13 @@ function paintAccount(ctx, body, me) {
         <a href="index.html" target="_blank" rel="noopener">${icon('home')}<span>Sitio de Enny Toro</span></a></div>
     </section>`;
 
+  $('#themeSw', body).onclick = (e) => {
+    const root = document.documentElement;
+    const on = !e.currentTarget.classList.contains('on');
+    root.dataset.theme = on ? 'dark' : 'light';
+    try { localStorage.setItem('enny-theme', root.dataset.theme); } catch (_) {}
+    renderSettings(ctx, $('#view'), ['cuenta']);
+  };
   $('#privSw', body).onclick = async (e) => {
     const on = !e.currentTarget.classList.contains('on');
     try {
@@ -94,7 +108,7 @@ function paintAccount(ctx, body, me) {
 function paintApp(ctx, body) {
   const done = installer.standalone;
   body.innerHTML = `<section class="cx-card cx-pad set-card set-app">
-      <div class="app-art">${icon('mobile')}</div>
+      <img class="app-art" src="public/img/hosannia-appicon.png" alt="Icono de Hosannia">
       <div>
         <h3>Hosannia en tu celular</h3>
         <p class="muted">Instálala y se abre como una aplicación: pantalla completa, icono propio y sin buscar el enlace cada vez. Ocupa menos de 1 MB.</p>
