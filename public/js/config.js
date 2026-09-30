@@ -25,9 +25,13 @@ window.ENNY = {
   SUPABASE_ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjbGp3Y3RubHFnemdjd2Jjb2Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NDEwOTksImV4cCI6MjEwNjMxNzA5OX0.xa7yHaTgcH_w7FYnQQXpflY6wM_gwikzFj6ktA_hJIs',
 
   // Modo demostración: 'auto' = se activa solo si Supabase no está configurado.
-  // true = forzarlo aunque haya Supabase (útil mientras no haya SMTP propio
-  // para el correo de registro — ver CLAUDE.md).
-  DEMO_MODE: 'auto',
+  // true = forzarlo aunque haya Supabase.
+  // FORZADO A true: Supabase y PayPal ya están conectados y verificados
+  // (login real + suscripción probados con un usuario de prueba), pero el
+  // registro público todavía no funciona sin SMTP propio (ver CLAUDE.md):
+  // sin eso, un visitante nuevo que se registre de verdad se quedaría sin
+  // poder confirmar su cuenta. Vuelve a 'auto' en cuanto haya SMTP.
+  DEMO_MODE: true,
 
   // PayPal → developer.paypal.com → Apps & Credentials → Client ID (público)
   PAYPAL_CLIENT_ID: 'BAAoMXfjgI_-Z2GtCVIY7xKZWy5Vd9sQEI7cB0dGdWPLpzHYzs2-mbgX07D7ZcO02YkHTlOoufinCEdzC4',
