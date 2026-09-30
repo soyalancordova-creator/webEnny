@@ -39,12 +39,14 @@ const ROUTES = [
   { re: /^#\/perfil(?:\/([\w-]+))?$/, view: 'profile', nav: 'perfil' },
   { re: /^#\/editar-perfil$/, view: 'profileEdit', nav: 'perfil' },
   { re: /^#\/guardados$/, view: 'saved', nav: 'guardados' },
-  { re: /^#\/notificaciones$/, view: 'notifications', nav: 'notificaciones' },
+  { re: /^#\/notificaciones$/, view: 'notifications', nav: 'notificaciones', sinTabs: true },
   { re: /^#\/ajustes(?:\/(suscripcion|ayuda|cuenta|app))?$/, view: 'settings', nav: 'ajustes' },
   { re: /^#\/planes$/, view: 'plans', nav: 'ajustes' },
   { re: /^#\/buscar(?:\?q=(.*))?$/, view: 'search', nav: 'buscar' },
-  { re: /^#\/crear$/, view: 'compose', nav: 'crear', full: true },
+  { re: /^#\/crear(?:\?(.*))?$/, view: 'compose', nav: 'crear', full: true, limpio: true },
   { re: /^#\/primeros-pasos(?:\/(\w+))?$/, view: 'onboarding', nav: '', full: true, limpio: true },
+  { re: /^#\/mensajes\/([\w-]+)$/, view: 'conversacion', nav: '', full: true, limpio: true },
+  { re: /^#\/mensajes$/, view: 'mensajes', nav: '', full: true, limpio: true },
   { re: /^#\/grupos$/, view: 'grupos', nav: 'grupos' },
   { re: /^#\/admin(?:\/(partituras|colecciones|avisos|moderacion|alumnos))?(?:\/([\w-]+))?$/, view: 'admin', nav: 'admin', admin: true },
 ];
@@ -68,6 +70,8 @@ const LOADERS = {
   search: () => import('./views/search.js').then((m) => m.renderSearch),
   compose: () => import('./views/compose.js').then((m) => m.renderCompose),
   onboarding: () => import('./views/onboarding.js').then((m) => m.renderOnboarding),
+  mensajes: () => import('./views/chat.js').then((m) => m.renderMensajes),
+  conversacion: () => import('./views/chat.js').then((m) => m.renderConversacion),
   admin: () => import('./views/admin.js').then((m) => m.renderAdmin),
 };
 
@@ -90,6 +94,9 @@ async function route() {
   if (r.admin && !me.isAdmin) { ctx.go('#/'); return; }
   view.className = 'cx-view' + (r.full ? ' full' : '');
   document.body.classList.toggle('solo', !!r.limpio);
+  // notificaciones es una pantalla aparte: se ocultan la barra inferior y la burbuja
+  // de chat, pero se conserva la superior (con el menú) para poder salir de ahí
+  document.body.classList.toggle('sin-tabs', !!r.sinTabs);
   view.innerHTML = '<div class="cx-empty"><span class="spin"></span></div>';
   window.scrollTo(0, 0);
   try {
@@ -134,10 +141,27 @@ function railHTML() {
   const top = MENU.filter((m) => m.rail && !m.foot);
   const foot = MENU.filter((m) => m.rail && m.foot);
   const btn = (m) => `<a href="${m.href}" data-nav="${m.nav}" title="${m.label}" aria-label="${m.label}">${icon(m.ic)}</a>`;
+  const colapsado = document.body.classList.contains('side-collapsed');
   return `<a class="rl-logo" href="#/" aria-label="${esc(APP)}">${markSvg('hs-mark', true)}</a>
+    <button class="rl-toggle" id="railToggle" title="${colapsado ? 'Mostrar menú' : 'Ocultar menú'}" aria-label="${colapsado ? 'Mostrar menú' : 'Ocultar menú'}">${icon(colapsado ? 'chevR' : 'chevL')}</button>
     <nav class="rl-nav">${top.map(btn).join('')}</nav>
     <div class="rl-foot"><nav class="rl-nav">${foot.map(btn).join('')}</nav>
       <button class="rl-av" id="railAv" aria-label="Tu perfil">${avatar(me)}</button></div>`;
+}
+
+/* El panel con etiquetas se puede ocultar en escritorio para ganar espacio;
+   queda solo el riel de iconos. Se recuerda entre sesiones. */
+function aplicarColapso() {
+  let val = false;
+  try { val = localStorage.getItem('hosannia-side-collapsed') === '1'; } catch (_) {}
+  document.body.classList.toggle('side-collapsed', val);
+}
+function alternarColapso() {
+  const on = !document.body.classList.contains('side-collapsed');
+  document.body.classList.toggle('side-collapsed', on);
+  try { localStorage.setItem('hosannia-side-collapsed', on ? '1' : '0'); } catch (_) {}
+  const t = $('#railToggle');
+  if (t) { t.innerHTML = icon(on ? 'chevR' : 'chevL'); t.title = t.ariaLabel = on ? 'Mostrar menú' : 'Ocultar menú'; }
 }
 
 function paintShell() {
@@ -168,6 +192,7 @@ function paintShell() {
     { label: 'Cerrar sesión', icon: 'logout', danger: true, run: signOut },
   ]);
   $('#sideX').onclick = closeNav;
+  $('#railToggle').onclick = alternarColapso;
   $$('.cx-nav a, .rl-nav a', $('#side').parentElement).forEach((a) => { a.addEventListener('click', closeNav); });
 
   const cur = ROUTES.find((x) => x.re.test(location.hash || '#/'));
@@ -233,6 +258,7 @@ async function boot() {
   try { me = await store.me(); } catch (e) { console.error(e); me = null; }
   if (!me) { location.replace('academia.html?next=campus.html'); return; }
   document.title = APP;
+  aplicarColapso();
   paintShell(); bindTop(); installer.watch(); bindScrollBars();
   import('./views/chat.js').then((m) => m.montarBurbuja(ctx)).catch(() => {});
   if (store.onNotify) unsubNotif = store.onNotify(() => refreshBadges());

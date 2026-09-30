@@ -244,7 +244,7 @@ async function postsTab(ctx, g, el) {
   el.innerHTML = '<div class="fd-col"><div id="cmpG"></div><div class="fd-col" id="gList"></div></div>';
   const list = $('#gList', el);
   const puedePublicar = g.isGroup ? g.myStatus === 'active' : g.canManage;
-  if (puedePublicar) $('#cmpG', el).appendChild(composer(ctx, { groupId: g.id, onPosted: (p) => prependPost(list, p, ctx) }));
+  if (puedePublicar) $('#cmpG', el).appendChild(composer(ctx, { groupId: g.id }));
   else if (!g.isGroup) $('#cmpG', el).innerHTML = `<p class="muted" style="font-size:.86rem;padding:.2rem .2rem 1rem">${icon('megaphone')} En esta comunidad publica solo ${esc(g.owner ? g.owner.name : 'quien la creó')}.</p>`;
   await mountList(list, ctx, { groupId: g.id }, `Aún no hay publicaciones en est${g.isGroup ? 'e grupo' : 'a comunidad'}.`);
 }

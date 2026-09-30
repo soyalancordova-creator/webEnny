@@ -3,7 +3,6 @@
 ============================================================ */
 import { icon } from '../icons.js';
 import { $, $$, esc, richText, avatar, ago, toast, modal, confirmBox, lightbox, popMenu, loading, empty } from '../ui.js';
-import { compressImage, kb } from '../media.js';
 
 export const TYPES = {
   reflexion: { label: 'Reflexión', ic: 'edit' },
@@ -183,46 +182,20 @@ async function mountComments(box, post, ctx, onCount) {
 }
 
 /* ---------- composer ---------- */
-export function composer(ctx, { groupId = null, onPosted }) {
+/** Barra angosta: solo invita a publicar. Al tocarla se abre #/crear a pantalla completa. */
+export function composer(ctx, { groupId = null } = {}) {
   const el = document.createElement('section');
-  el.className = 'cx-card cx-pad cmp';
-  let images = [];
-  el.innerHTML = `<div class="cmp-row">${avatar(ctx.me)}<textarea maxlength="3000" placeholder="¿Qué está inspirando tu música hoy?" aria-label="Escribe una publicación"></textarea></div>
-    <div class="cmp-media"></div>
-    <div class="cmp-foot">
-      <label class="cmp-tool">${icon('image')}Fotos<input type="file" accept="image/*" multiple hidden></label>
-      <select aria-label="Tipo de publicación">${Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join('')}</select>
-      <span class="sp"></span>
-      <button class="btn btn-fill btn-sm" data-pub disabled><span>Publicar</span></button>
-    </div>`;
-  const ta = $('textarea', el), pubBtn = $('[data-pub]', el), mediaBox = $('.cmp-media', el);
-  const sync = () => { pubBtn.disabled = !ta.value.trim() && !images.length; ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, innerHeight * 0.4) + 'px'; };
-  ta.addEventListener('input', sync);
-  const drawMedia = () => {
-    mediaBox.innerHTML = images.map((im, i) => `<figure><img src="${im.preview}" alt=""><button data-rm="${i}" aria-label="Quitar">${icon('x')}</button><small>${kb(im.after)}</small></figure>`).join('');
-    $$('[data-rm]', mediaBox).forEach((b) => { b.onclick = () => { URL.revokeObjectURL(images[+b.dataset.rm].preview); images.splice(+b.dataset.rm, 1); drawMedia(); sync(); }; });
-  };
-  $('input[type=file]', el).onchange = async (e) => {
-    const files = [...e.target.files].slice(0, 6 - images.length); e.target.value = '';
-    if (!files.length) { toast('Máximo 6 fotos por publicación.'); return; }
-    for (const f of files) {
-      try { const c = await compressImage(f, { maxSide: 1600, quality: 0.8 }); images.push({ ...c, preview: URL.createObjectURL(c.blob) }); }
-      catch (err) { toast(err.message); }
-    }
-    const before = images.reduce((a, b) => a + b.before, 0), after = images.reduce((a, b) => a + b.after, 0);
-    if (images.length) toast(`Fotos optimizadas: ${kb(before)} → ${kb(after)}`);
-    drawMedia(); sync();
-  };
-  pubBtn.onclick = async () => {
-    pubBtn.disabled = true; pubBtn.innerHTML = '<span class="spin"></span>';
-    try {
-      const p = await ctx.store.createPost({ body: ta.value, type: $('select', el).value, groupId, images: images.map(({ blob, width, height, type }) => ({ blob, width, height, type })) });
-      images.forEach((im) => URL.revokeObjectURL(im.preview)); images = [];
-      ta.value = ''; drawMedia(); sync(); toast('Publicado. Gracias por compartir.');
-      if (onPosted) onPosted(p);
-    } catch (e) { toast(e.message); }
-    pubBtn.innerHTML = '<span>Publicar</span>'; sync();
-  };
+  el.className = 'cx-card cx-pad cmp-mini';
+  el.setAttribute('role', 'button');
+  el.tabIndex = 0;
+  el.setAttribute('aria-label', 'Crear publicación');
+  const destino = `#/crear${groupId ? `?g=${encodeURIComponent(groupId)}` : ''}`;
+  el.innerHTML = `${avatar(ctx.me)}<span class="cmp-mini-tx">¿Qué está inspirando tu música hoy?</span>
+    <button class="cx-iconbtn sm" data-foto aria-label="Agregar foto" title="Agregar foto">${icon('image')}</button>`;
+  const ir = (conFoto) => { ctx.go(`${destino}${conFoto ? (groupId ? '&' : '?') + 'foto=1' : ''}`); };
+  el.onclick = () => ir(false);
+  el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(false); } };
+  $('[data-foto]', el).onclick = (e) => { e.stopPropagation(); ir(true); };
   return el;
 }
 
@@ -262,7 +235,7 @@ export async function renderFeed(ctx, view) {
   const list = $('#list', view);
   let type = '';
   import('./stories.js').then((m) => m.mountStoryRail(ctx, $('#stories', view))).catch(() => {});
-  $('#cmpHost', view).appendChild(composer(ctx, { onPosted: (p) => { if (!type || p.type === type) prependPost(list, p, ctx); } }));
+  $('#cmpHost', view).appendChild(composer(ctx, {}));
   mountList(list, ctx, {});
 
   ctx.store.listGroups({ mine: true }).then((gs) => {

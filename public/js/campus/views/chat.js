@@ -1,17 +1,18 @@
 /* ============================================================
-   CHAT DIRECTO · la burbuja flotante
+   MENSAJES · pantalla completa, al estilo WhatsApp
    ------------------------------------------------------------
-   Lista de conversaciones y chat uno a uno con los hermanos
-   conectados. Funciona igual en la web y en la app instalada.
+   La burbuja flotante abre la bandeja (#/mensajes): junta los
+   chats directos con hermanos y los grupos a los que perteneces.
+   Cada conversación directa abre su propia pantalla (#/mensajes/:id).
+   El chat de un grupo sigue viviendo en #/grupo/:id/chat.
 ============================================================ */
 import { icon } from '../icons.js';
 import { $, $$, esc, richText, avatar, ago, clock, dayLabel, toast, lightbox, empty } from '../ui.js';
 import { compressImage } from '../media.js';
 
-let panel = null;      // el panel abierto, si lo hay
-let burbuja = null;    // el botón flotante
+let burbuja = null;
 
-/* ---------- botón flotante ---------- */
+/* ---------- botón flotante: abre la bandeja completa ---------- */
 export function montarBurbuja(ctx) {
   if (burbuja) return;
   burbuja = document.createElement('button');
@@ -19,7 +20,7 @@ export function montarBurbuja(ctx) {
   burbuja.id = 'chatFab';
   burbuja.setAttribute('aria-label', 'Mensajes');
   burbuja.innerHTML = `${icon('comment')}<span class="badge" hidden></span>`;
-  burbuja.onclick = () => (panel ? cerrar() : abrirLista(ctx));
+  burbuja.onclick = () => ctx.go('#/mensajes');
   document.body.appendChild(burbuja);
   refrescarBadge(ctx);
   setInterval(() => refrescarBadge(ctx), 45000);
@@ -35,73 +36,81 @@ export async function refrescarBadge(ctx) {
   } catch (_) {}
 }
 
-function cerrar() {
-  if (!panel) return;
-  if (panel._limpiar) panel._limpiar();
-  panel.remove(); panel = null;
-  burbuja && burbuja.classList.remove('abierto');
-}
+/** Atajo desde un perfil: abre directo la conversación con esa persona. */
+export function abrirChat(ctx, persona) { ctx.go(`#/mensajes/${persona.id}`); }
 
-function marco(titulo, atras) {
-  const el = document.createElement('div');
-  el.className = 'chat-panel';
-  el.innerHTML = `<header>
-      ${atras ? `<button class="cx-iconbtn sm" data-back aria-label="Volver">${icon('back')}</button>` : ''}
-      <b>${titulo}</b>
-      <button class="cx-iconbtn sm" data-x aria-label="Cerrar">${icon('x')}</button>
-    </header><div class="chat-body"></div>`;
-  $('[data-x]', el).onclick = cerrar;
-  return el;
-}
+/* ---------- bandeja: directos + grupos, todo junto ---------- */
+export async function renderMensajes(ctx, view) {
+  ctx.setTitle('Mensajes');
+  view.innerHTML = `<div class="msg">
+    <header class="msg-top">
+      <button class="cx-iconbtn" data-back aria-label="Volver">${icon('back')}</button>
+      <b>Mensajes</b><span class="sp"></span>
+    </header>
+    <div class="msg-body" id="mb"><div class="cx-empty"><span class="spin"></span></div></div>
+  </div>`;
+  $('[data-back]', view).onclick = () => ctx.go('#/comunidad');
+  const body = $('#mb', view);
 
-/* ---------- lista de conversaciones ---------- */
-export async function abrirLista(ctx) {
-  cerrar();
-  panel = marco('Mensajes', false);
-  document.body.appendChild(panel);
-  burbuja && burbuja.classList.add('abierto');
-  const body = $('.chat-body', panel);
-  body.innerHTML = '<div class="cx-empty"><span class="spin"></span></div>';
+  let directos = [], grupos = [];
+  try {
+    [directos, grupos] = await Promise.all([
+      ctx.store.listChats().catch(() => []),
+      ctx.store.listGroups({ mine: true, type: 'group' }).catch(() => []),
+    ]);
+  } catch (_) {}
 
-  let chats = [];
-  try { chats = await ctx.store.listChats(); } catch (e) { empty(body, 'info', e.message); return; }
-
-  if (!chats.length) {
+  if (!directos.length && !grupos.length) {
     body.innerHTML = `<div class="chat-vacio">${icon('comment')}
       <p>Todavía no tienes conversaciones.</p>
-      <small>Conéctate con un hermano y escríbele desde su perfil.</small></div>`;
+      <small>Conéctate con un hermano y escríbele desde su perfil, o entra a un grupo con chat.</small></div>`;
     return;
   }
 
-  body.innerHTML = `<div class="chat-list">${chats.map((c) => `
-    <button class="ch-row${c.unread ? ' un' : ''}" data-u="${esc(c.user.id)}">
-      ${avatar(c.user)}
-      <div class="tx"><b>${esc(c.user.name)}</b>
-        <small>${c.last.mine ? 'Tú: ' : ''}${esc(c.last.body || 'Foto')}</small></div>
-      <div class="mt"><time>${ago(c.last.created_at)}</time>
-        ${c.unread ? `<span class="badge">${c.unread}</span>` : ''}</div>
-    </button>`).join('')}</div>`;
-  $$('[data-u]', body).forEach((b) => { b.onclick = () => abrirChat(ctx, chats.find((c) => c.user.id === b.dataset.u).user); });
+  const filas = [
+    ...directos.map((c) => ({
+      href: `#/mensajes/${c.user.id}`, avatar: avatar(c.user), nombre: c.user.name,
+      linea: `${c.last.mine ? 'Tú: ' : ''}${c.last.body || 'Foto'}`, hora: c.last.created_at, no: c.unread,
+    })),
+    ...grupos.map((g) => ({
+      href: `#/grupo/${g.id}/chat`, avatar: `<span class="gthumb sm">${g.cover ? `<img src="${esc(g.cover)}" alt="">` : icon('comment')}</span>`,
+      nombre: g.name, linea: 'Grupo', hora: g.created_at, no: 0, esGrupo: true,
+    })),
+  ].sort((a, b) => new Date(b.hora) - new Date(a.hora));
+
+  body.innerHTML = `<div class="chat-list">${filas.map((f) => `
+    <a class="ch-row${f.no ? ' un' : ''}" href="${f.href}">
+      ${f.avatar}
+      <div class="tx"><b>${esc(f.nombre)}${f.esGrupo ? ` <small class="ch-tag">${icon('comment')}</small>` : ''}</b>
+        <small>${esc(f.linea)}</small></div>
+      <div class="mt"><time>${ago(f.hora)}</time>${f.no ? `<span class="badge">${f.no}</span>` : ''}</div>
+    </a>`).join('')}</div>`;
 }
 
-/* ---------- conversación ---------- */
-export async function abrirChat(ctx, persona) {
-  cerrar();
-  panel = marco(esc(persona.name), true);
-  document.body.appendChild(panel);
-  burbuja && burbuja.classList.add('abierto');
-  $('[data-back]', panel).onclick = () => abrirLista(ctx);
+/* ---------- conversación directa, a pantalla completa ---------- */
+export async function renderConversacion(ctx, view, [otroId]) {
+  let persona;
+  try { persona = await ctx.store.getProfile(otroId); }
+  catch (_) { persona = { id: otroId, name: 'Hermano' }; }
+  ctx.setTitle(persona.name);
 
-  const body = $('.chat-body', panel);
-  body.innerHTML = `<div class="ch-list" id="dmList" aria-live="polite"></div>
+  view.innerHTML = `<div class="msg">
+    <header class="msg-top">
+      <button class="cx-iconbtn" data-back aria-label="Volver a mensajes">${icon('back')}</button>
+      <a class="msg-who" href="#/perfil/${esc(persona.id)}">${avatar(persona)}<b>${esc(persona.name)}</b></a>
+      <span class="sp"></span>
+    </header>
+    <div class="ch-list" id="dmList" aria-live="polite"></div>
     <form class="ch-form" id="dmF">
-      <label class="cx-iconbtn sm" aria-label="Enviar foto" style="cursor:pointer">${icon('image')}
+      <label class="cx-iconbtn" aria-label="Enviar foto" style="cursor:pointer">${icon('image')}
         <input type="file" accept="image/*" hidden id="dmImg"></label>
       <textarea id="dmT" rows="1" maxlength="2000" placeholder="Escribe con gracia…" aria-label="Mensaje"></textarea>
-      <button class="cx-iconbtn sm ch-send" aria-label="Enviar">${icon('send')}</button>
-    </form>`;
+      <button class="cx-iconbtn ch-send" aria-label="Enviar">${icon('send')}</button>
+    </form>
+  </div>`;
+  $('[data-back]', view).onclick = () => ctx.go('#/mensajes');
 
-  const list = $('#dmList', body), ta = $('#dmT', body);
+  const list = $('#dmList', view), ta = $('#dmT', view);
   const vistos = new Set(); let ultimo = null;
   const pegado = () => list.scrollHeight - list.scrollTop - list.clientHeight < 120;
 
@@ -125,7 +134,7 @@ export async function abrirChat(ctx, persona) {
     const msgs = await ctx.store.listDirect(persona.id);
     msgs.forEach((m) => pinta(m, false));
     list.scrollTop = list.scrollHeight;
-    if (!msgs.length) list.innerHTML = `<div class="chat-vacio"><p>Escríbele a ${esc(persona.name.split(' ')[0])}.</p></div>`;
+    if (!msgs.length) list.innerHTML = `<div class="chat-vacio"><p>Escríbele a ${esc((persona.name || '').split(' ')[0])}.</p></div>`;
     refrescarBadge(ctx);
   } catch (e) { empty(list, 'info', e.message); }
 
@@ -133,20 +142,20 @@ export async function abrirChat(ctx, persona) {
     const v = list.querySelector('.chat-vacio'); if (v) v.remove();
     try { pinta(await ctx.store.sendDirect(persona.id, payload)); } catch (err) { toast(err.message); }
   };
-  $('#dmF', body).onsubmit = (e) => {
+  $('#dmF', view).onsubmit = (e) => {
     e.preventDefault();
     const v = ta.value.trim(); if (!v) return;
     ta.value = ''; ta.style.height = ''; enviar({ body: v });
   };
-  ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#dmF', body).requestSubmit(); } });
+  ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#dmF', view).requestSubmit(); } });
   ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
-  $('#dmImg', body).onchange = async (e) => {
+  $('#dmImg', view).onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
     try { const img = await compressImage(f, { maxSide: 1400, quality: 0.78 }); await enviar({ body: ta.value.trim(), image: img }); ta.value = ''; }
     catch (err) { toast(err.message); }
   };
 
   const unsub = ctx.store.subscribeDirect(persona.id, (m) => { const v = list.querySelector('.chat-vacio'); if (v) v.remove(); pinta(m, false); });
-  panel._limpiar = () => { if (unsub) unsub(); };
   ta.focus({ preventScroll: true });
+  return () => { if (unsub) unsub(); };
 }

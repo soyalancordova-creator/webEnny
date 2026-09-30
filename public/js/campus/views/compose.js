@@ -15,10 +15,13 @@ const EMOJIS = {
   'Ánimo': ['😊', '🥹', '😭', '🤗', '💪', '👏', '🌅', '🌻', '⭐', '💫', '🫶', '🤝'],
 };
 
-export async function renderCompose(ctx, view, [], opts = {}) {
+export async function renderCompose(ctx, view, [raw]) {
   ctx.setTitle('Crear publicación');
   const me = ctx.me;
-  const volver = () => history.length > 1 ? history.back() : ctx.go('#/comunidad');
+  const qs = new URLSearchParams(raw || '');
+  const groupId = qs.get('g') || null;
+  const abrirFoto = qs.get('foto') === '1';
+  const volver = () => ctx.go(groupId ? `#/grupo/${groupId}` : '#/comunidad');
   let imgs = [];
   let lugar = '';
 
@@ -122,14 +125,14 @@ export async function renderCompose(ctx, view, [], opts = {}) {
   /* publicar */
   go.onclick = async () => {
     go.disabled = true;
-    const cuerpo = lugar ? `${tx.value.trim()}\n\n${icon ? '' : ''}📍 ${lugar}`.trim() : tx.value.trim();
+    const cuerpo = lugar ? `${tx.value.trim()}\n\n📍 ${lugar}`.trim() : tx.value.trim();
     try {
-      const p = await ctx.store.createPost({ body: cuerpo, type: $('#ty', view).value, images: imgs, groupId: opts.groupId || null });
+      await ctx.store.createPost({ body: cuerpo, type: $('#ty', view).value, images: imgs, groupId });
       toast('Publicado. 🙌');
-      if (opts.onPosted) opts.onPosted(p);
-      ctx.go('#/comunidad');
+      volver();
     } catch (e) { toast(e.message); go.disabled = false; }
   };
 
+  if (abrirFoto) setTimeout(() => $('#file', view).click(), 250);
   refresca();
 }
