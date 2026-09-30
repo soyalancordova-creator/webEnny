@@ -9,8 +9,16 @@
    PayPal: esos van solo en las variables de entorno de Vercel.
 ============================================================ */
 window.ENNY = {
-  // Nombre de la academia (aparece en la plataforma). Cámbialo cuando elijan uno.
-  APP_NAME: 'Academia Enny Toro',
+  // Nombre de la herramienta (aparece en toda la plataforma).
+  APP_NAME: 'Hosannia',
+
+  // Dirección pública de Hosannia. Mientras viva en el mismo sitio, déjalo
+  // vacío y el sitio de Enny enlazará a academia.html. Cuando tenga su dominio:
+  // HOSANNIA_URL: 'https://hosannia.com'
+  HOSANNIA_URL: '',
+
+  // Correo al que escriben los alumnos desde Ajustes → Ayuda
+  SOPORTE_EMAIL: 'ennytorov@gmail.com',
 
   // Supabase → Project Settings → API
   SUPABASE_URL:  'PEGA_AQUI_TU_PROJECT_URL',

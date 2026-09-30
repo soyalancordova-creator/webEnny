@@ -80,12 +80,16 @@ export function createSupaStore(sb, cfg = {}) {
       if (!p) throw new Error('Perfil no encontrado.');
       pcache.set(id, p);
       const hidden = p.privacy === 'private' && id !== me;
-      const [posts, groups] = await Promise.all([
+      const [posts, groups, followers, following, mine] = await Promise.all([
         sb.from('feed_posts').select('id', { count: 'exact', head: true }).eq('author_id', id).is('community_id', null),
         sb.from('community_members').select('community_id', { count: 'exact', head: true }).eq('user_id', id).eq('status', 'active'),
+        sb.from('follows').select('target_id', { count: 'exact', head: true }).eq('target_id', id),
+        sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('follower_id', id),
+        sb.from('follows').select('target_id').eq('follower_id', me).eq('target_id', id).maybeSingle(),
       ]);
       return { ...pub(p), cover: p.cover_url || '', bio: p.bio || '', church: p.church || '', city: p.city || '', social: p.social || '',
-        privacy: p.privacy, created_at: p.created_at, hidden, isMe: id === me, stats: { posts: posts.count || 0, groups: groups.count || 0, amens: 0 } };
+        privacy: p.privacy, created_at: p.created_at, hidden, isMe: id === me, iFollow: !!(mine && mine.data),
+        stats: { posts: posts.count || 0, groups: groups.count || 0, amens: 0, followers: followers.count || 0, following: following.count || 0 } };
     },
     async updateMe(patch) {
       const me = await uid(); const row = {};
@@ -108,10 +112,75 @@ export function createSupaStore(sb, cfg = {}) {
       await q(sb.from('profiles').update({ cover_url: url }).eq('id', me)); meCache = null; pcache.delete(me); return url;
     },
     async searchPeople(term) {
+      const me = await uid();
+      const t = String(term || '').replace(/[%_,()]/g, '').trim();
       let r = sb.from('public_profiles').select('*').limit(20);
-      if (term) r = r.ilike('full_name', `%${term.replace(/[%_]/g, '')}%`);
-      const rows = await q(r); rows.forEach((p) => pcache.set(p.id, p)); return rows.map(pub);
+      if (t) r = r.or(`full_name.ilike.%${t}%,service.ilike.%${t}%,church.ilike.%${t}%,city.ilike.%${t}%`);
+      const rows = await q(r); rows.forEach((p) => pcache.set(p.id, p));
+      const ids = rows.map((p) => p.id);
+      const fw = ids.length ? await q(sb.from('follows').select('target_id').eq('follower_id', me).in('target_id', ids)) : [];
+      const set = new Set(fw.map((f) => f.target_id));
+      return rows.map((p) => ({ ...pub(p), church: p.church || '', iFollow: set.has(p.id), isMe: p.id === me }));
     },
+
+    /* ---------- acompañar (seguir) ---------- */
+    async follow(userId) {
+      const me = await uid();
+      if (userId === me) throw new Error('No puedes acompañarte a ti misma.');
+      const cur = await q(sb.from('follows').select('target_id').eq('follower_id', me).eq('target_id', userId).maybeSingle());
+      if (cur) { await q(sb.from('follows').delete().eq('follower_id', me).eq('target_id', userId)); return false; }
+      await q(sb.from('follows').insert({ follower_id: me, target_id: userId }), 'No se pudo acompañar a esta persona.');
+      return true;
+    },
+    async listFollow(userId, kind = 'following') {
+      const me = await uid();
+      const rows = kind === 'followers'
+        ? await q(sb.from('follows').select('follower_id').eq('target_id', userId).limit(100))
+        : await q(sb.from('follows').select('target_id').eq('follower_id', userId).limit(100));
+      const ids = rows.map((r) => r.follower_id || r.target_id);
+      if (!ids.length) return [];
+      const ppl = await people(ids);
+      const fw = await q(sb.from('follows').select('target_id').eq('follower_id', me).in('target_id', ids));
+      const set = new Set(fw.map((f) => f.target_id));
+      return ids.map((i) => ({ ...ppl[i], iFollow: set.has(i), isMe: i === me }));
+    },
+
+    /* ---------- historias (24 h) ---------- */
+    async listStories() {
+      const me = await uid();
+      // RLS ya filtra: solo llegan las mías, las de quien acompaño y las de la docente
+      const rows = await q(sb.from('stories').select('*').gt('created_at', new Date(Date.now() - 86400000).toISOString()).order('created_at'));
+      if (!rows.length) return [];
+      const [ppl, views] = await Promise.all([
+        people(rows.map((r) => r.author_id)),
+        q(sb.from('story_views').select('story_id,user_id').in('story_id', rows.map((r) => r.id))),
+      ]);
+      const urls = await signed('stories', rows.map((r) => r.image_path).filter(Boolean));
+      const seen = new Set(views.filter((v) => v.user_id === me).map((v) => v.story_id));
+      const byAuthor = new Map();
+      rows.forEach((r) => {
+        if (!byAuthor.has(r.author_id)) byAuthor.set(r.author_id, { author: ppl[r.author_id], mine: r.author_id === me, items: [] });
+        byAuthor.get(r.author_id).items.push({ id: r.id, text: r.text || '', image: r.image_path ? urls[r.image_path] || '' : '',
+          created_at: r.created_at, seen: seen.has(r.id), mine: r.author_id === me,
+          views: r.author_id === me ? views.filter((v) => v.story_id === r.id).length : 0 });
+      });
+      const list = [...byAuthor.values()];
+      list.forEach((g) => { g.allSeen = g.items.every((i) => i.seen); });
+      return list.sort((a, b) => (a.mine ? -1 : b.mine ? 1 : a.allSeen - b.allSeen));
+    },
+    async createStory({ image = null, text = '' }) {
+      const me = await uid();
+      text = String(text || '').trim().slice(0, 200);
+      if (!image && !text) throw new Error('Escribe algo o elige una foto.');
+      let path = null;
+      if (image) { path = `${me}/${Date.now()}.${ext(image.type)}`; await upload('stories', path, image.blob); }
+      return q(sb.from('stories').insert({ author_id: me, text, image_path: path }).select().single(), 'No se pudo publicar la historia.');
+    },
+    async seeStory(id) {
+      const me = await uid();
+      await sb.from('story_views').insert({ story_id: id, user_id: me });   // si ya estaba, la clave primaria lo ignora
+    },
+    async deleteStory(id) { await q(sb.from('stories').delete().eq('id', id), 'No puedes borrar esta historia.'); },
 
     /* ---------- publicaciones ---------- */
     async _decorate(rows) {
@@ -225,15 +294,21 @@ export function createSupaStore(sb, cfg = {}) {
       const isAdmin = (await this.me()).isAdmin;
       return rows.map((g) => {
         const m = mine.find((x) => x.community_id === g.id); const st = stats.find((x) => x.community_id === g.id) || {};
+        const canManage = isAdmin || !!(m && m.status === 'active' && ['owner', 'admin'].includes(m.role));
+        const inside = canManage || !!(m && m.status === 'active');
         return { id: g.id, name: g.name, description: g.description, rules: g.rules, privacy: g.privacy, cover: g.cover_url || '', created_at: g.created_at,
           owner: owners[g.owner_id], members: st.members || 0, pending: st.pending || 0, myStatus: m ? m.status : null, myRole: m ? m.role : null,
-          canManage: isAdmin || !!(m && m.status === 'active' && ['owner', 'admin'].includes(m.role)) };
+          info: { kind: g.kind || 'grupo', phone: g.phone || '', email: g.email || '', address: g.address || '', schedule: g.schedule || '', site: g.site || '' },
+          show: { contact: g.show_contact !== false, address: g.show_address !== false, schedule: g.show_schedule !== false, members: g.show_members !== false },
+          showMembers: g.show_members !== false || inside,
+          canManage };
       });
     },
     async listGroups({ q: term = '', mine = false } = {}) {
       const me = await uid();
-      let r = sb.from('communities').select('*').order('created_at', { ascending: false }).limit(60);
-      if (term) r = r.ilike('name', `%${term.replace(/[%_]/g, '')}%`);
+      let r = sb.from('communities_public').select('*').order('created_at', { ascending: false }).limit(60);
+      const t = String(term || '').replace(/[%_,()]/g, '').trim();
+      if (t) r = r.or(`name.ilike.%${t}%,description.ilike.%${t}%`);
       if (mine) {
         const m = await q(sb.from('community_members').select('community_id').eq('user_id', me).eq('status', 'active'));
         if (!m.length) return []; r = r.in('id', m.map((x) => x.community_id));
@@ -241,20 +316,47 @@ export function createSupaStore(sb, cfg = {}) {
       return this._groups(await q(r));
     },
     async getGroup(id) {
-      const g = await q(sb.from('communities').select('*').eq('id', id).maybeSingle());
+      const g = await q(sb.from('communities_public').select('*').eq('id', id).maybeSingle());
       if (!g) throw new Error('Comunidad no encontrada.');
       return (await this._groups([g]))[0];
     },
-    async createGroup({ name, description, privacy = 'public', cover = null, rules = '' }) {
+    async createGroup({ name, description, privacy = 'public', cover = null, rules = '', kind = 'grupo' }) {
       const me = await uid();
       const g = await q(sb.from('communities').insert({ name: String(name || '').trim().slice(0, 60), description: String(description || '').trim().slice(0, 400),
-        rules: String(rules || '').slice(0, 800), privacy: privacy === 'private' ? 'private' : 'public', owner_id: me }).select().single(), 'No se pudo crear la comunidad.');
+        rules: String(rules || '').slice(0, 800), privacy: privacy === 'private' ? 'private' : 'public', owner_id: me,
+        kind: kind === 'iglesia' ? 'iglesia' : 'grupo' }).select().single(), 'No se pudo crear la comunidad.');
       if (cover) {
         const path = `${g.id}/cover.${ext(cover.type)}`;
         await upload('community', path, cover.blob);
         await q(sb.from('communities').update({ cover_url: sb.storage.from('community').getPublicUrl(path).data.publicUrl }).eq('id', g.id));
       }
       return this.getGroup(g.id);
+    },
+    async updateGroup(id, patch) {
+      const row = {};
+      if ('name' in patch) row.name = String(patch.name).trim().slice(0, 60);
+      if ('description' in patch) row.description = String(patch.description).slice(0, 400);
+      if ('rules' in patch) row.rules = String(patch.rules).slice(0, 800);
+      if ('privacy' in patch) row.privacy = patch.privacy === 'private' ? 'private' : 'public';
+      if (patch.info) {
+        const i = patch.info;
+        if ('kind' in i) row.kind = i.kind === 'iglesia' ? 'iglesia' : 'grupo';
+        ['phone', 'email', 'address', 'schedule', 'site'].forEach((k) => { if (k in i) row[k] = String(i[k] ?? '').slice(0, 160); });
+      }
+      if (patch.show) {
+        const map = { contact: 'show_contact', address: 'show_address', schedule: 'show_schedule', members: 'show_members' };
+        Object.entries(patch.show).forEach(([k, v]) => { if (map[k]) row[map[k]] = !!v; });
+      }
+      if (patch.cover) {
+        const path = `${id}/cover.${ext(patch.cover.type)}`;
+        await upload('community', path, patch.cover.blob);
+        row.cover_url = sb.storage.from('community').getPublicUrl(path).data.publicUrl + '?v=' + Date.now();
+      }
+      if (Object.keys(row).length) await q(sb.from('communities').update(row).eq('id', id), 'Solo quien administra la comunidad puede cambiar esto.');
+      return this.getGroup(id);
+    },
+    async deleteGroup(id) {
+      await q(sb.from('communities').delete().eq('id', id), 'Solo quien creó la comunidad puede eliminarla.');
     },
     async joinGroup(id) {
       const me = await uid(); const g = await this.getGroup(id);

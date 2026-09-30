@@ -61,7 +61,21 @@ const P = {
   sun: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
   megaphone: '<path d="M3 10v4l11 5V5z"/><path d="M14 9a3 3 0 0 1 0 6M6 15l1.5 5h2.5l-1-4.4"/>',
+  camera: '<path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7v.3"/><path d="M12 17v.5"/>',
+  phone: '<path d="M6 3h3l1.5 4.5-2 1.4a12 12 0 0 0 5.6 5.6l1.4-2L20 14v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 5.2 2 2 0 0 1 6 3z"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>',
+  mobile: '<rect x="6.5" y="2.5" width="11" height="19" rx="3"/><path d="M10.5 18.5h3"/>',
+  hands: '<path d="M8 12V5a1.3 1.3 0 0 1 2.6 0v6"/><path d="M10.6 11V4a1.3 1.3 0 0 1 2.6 0v7"/><path d="M13.2 11.5V6a1.3 1.3 0 0 1 2.6 0v8"/><path d="M5.4 12.5v-2a1.3 1.3 0 0 1 2.6 0V13"/><path d="M5.4 12.5c0 5 2.6 8.5 6.6 8.5s6.2-3.1 6.2-7"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.2 2"/>',
+  plusCircle: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 17h5"/>',
 };
+
+/** La marca de Hosannia (cruz + nota). `white` para fondos oscuros. */
+export function markSvg(cls = 'hs-mark', white = false) {
+  return `<img class="${cls}" src="public/img/hosannia-mark${white ? '-white' : ''}.png" alt="" aria-hidden="true">`;
+}
 
 export function icon(name, cls = '') {
   const body = P[name] || P.info;

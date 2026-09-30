@@ -1,0 +1,69 @@
+/* ============================================================
+   HOSANNIA · identidad de la herramienta
+   ------------------------------------------------------------
+   Se carga DESPUÉS de brand.css y redefine sus tokens. El sitio de
+   Enny conserva su marfil y vino; la herramienta usa azul noche,
+   rojo y dorado, con Montserrat y vidrio líquido.
+============================================================ */
+:root{
+  --navy:#0D1321; --navy-2:#16203A; --red:#B0192E; --red-2:#C93247;
+  --cloud:#E6E7EA; --gold-h:#D4AF37;
+
+  --bg:#F7F4EF; --bg-deep:#EDEEF1;
+  --ink:#0D1321; --ink-2:#5A6172; --ink-3:#8D94A3;
+  --wine:#B0192E; --wine-soft:#C93247;
+  --gold:#C39B2E; --gold-2:#D4AF37;
+  --fill:#B0192E; --fill-ink:#FFFFFF; --fill-hov:#0D1321;
+
+  --glass:rgba(255,255,255,.62); --glass-2:rgba(255,255,255,.4);
+  --glass-brd:rgba(255,255,255,.8); --glass-hi:rgba(255,255,255,.95);
+  --panel:#FFFFFF;
+  --hair:rgba(13,19,33,.10);
+  --shadow:0 30px 70px -26px rgba(13,19,33,.30);
+  --shadow-s:0 12px 34px -16px rgba(13,19,33,.24);
+
+  --serif:'Montserrat',-apple-system,'Segoe UI',sans-serif;
+  --sans:'Montserrat',-apple-system,'Segoe UI',sans-serif;
+
+  /* piezas del campus */
+  --side:#0D1321; --side-2:#16203A; --side-ink:rgba(255,255,255,.66);
+  --cursor:#B0192E; --cursor-glow:rgba(176,25,46,.22);
+  --hl:rgba(212,175,55,.22); --hl-edge:rgba(195,155,46,.6);
+  --loop:rgba(176,25,46,.08); --loop-edge:rgba(176,25,46,.45);
+  --r-amen:#C39B2E; --r-orando:#2F4A7A; --r-aleluya:#B0192E;
+}
+html[data-theme="dark"]{
+  --bg:#070A11; --bg-deep:#0D1321;
+  --ink:#EEF1F6; --ink-2:#9AA3B5; --ink-3:#6B7385;
+  --wine:#F0566E; --wine-soft:#F4788B;
+  --gold:#D4AF37; --gold-2:#E8C768;
+  --fill:#B0192E; --fill-ink:#FFFFFF; --fill-hov:#C93247;
+  --glass:rgba(255,255,255,.07); --glass-2:rgba(255,255,255,.045);
+  --glass-brd:rgba(255,255,255,.12); --glass-hi:rgba(255,255,255,.18);
+  --panel:#111827;
+  --hair:rgba(255,255,255,.12);
+  --side:#080B12; --side-2:#131C30;
+  --hl:rgba(212,175,55,.26);
+}
+
+/* los títulos de Playfair eran cursivos y ligeros: Montserrat necesita peso */
+h1,h2,h3,.cx-brand,.eyebrow{font-family:var(--sans)}
+h1,h2,h3{font-weight:600;letter-spacing:-.01em}
+
+/* ---------- vidrio líquido ---------- */
+.cx-card,.cx-top,.cx-tabs,.pop,.md-box,.lq{
+  backdrop-filter:blur(26px) saturate(180%);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);
+}
+.cx-card{border-radius:26px;box-shadow:var(--shadow-s),inset 0 1px 0 var(--glass-hi)}
+.cx-search{border-radius:16px;box-shadow:inset 0 1px 0 var(--glass-hi)}
+.btn{border-radius:14px}
+.btn-fill{box-shadow:0 10px 24px -12px rgba(176,25,46,.7)}
+
+/* ---------- logotipo ---------- */
+.hs-mark{width:auto;height:1.5em;flex:none;display:block;object-fit:contain}
+.hs-word{display:inline-flex;align-items:center;font-weight:600;letter-spacing:.08em;line-height:1}
+.hs-logo{display:inline-flex;align-items:center;gap:.5rem}
+/* en la barra lateral el logotipo va en crema con la nota en rojo */
+.cx-brand.hs-logo{display:flex;align-items:center;gap:.6rem;padding:.4rem .6rem 1rem;font-size:1.05rem;color:#fff}
+.cx-brand.hs-logo .hs-mark{height:1.9em}

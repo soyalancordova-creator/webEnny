@@ -213,6 +213,35 @@ await deny('Alumno no puede subir partituras al bucket privado', U.ana, () => q(
 /* ---------------- 9. anti-spam ---------------- */
 await deny('Límite: la 6ª publicación en un minuto se rechaza', U.caro, async () => { for (let i = 0; i < 6; i++) await q(`insert into public.feed_posts (author_id, body) values ('${U.caro}', 'spam ${i}')`); });
 
+/* ---------------- 10. acompañar e historias ---------------- */
+await deny('Hacer que otra persona acompañe a alguien', U.beto, () => q(`insert into public.follows (follower_id, target_id) values ('${U.ana}', '${U.caro}')`));
+await deny('Acompañarse a sí misma', U.ana, () => q(`insert into public.follows (follower_id, target_id) values ('${U.ana}', '${U.ana}')`));
+await allow('Acompañar a alguien', U.ana, () => q(`insert into public.follows (follower_id, target_id) values ('${U.ana}', '${U.beto}')`));
+await expect('Acompañar avisa a quien es acompañado', U.beto, () => q(`select * from public.notifications where kind = 'follow' and user_id = '${U.beto}'`), (r) => r.length === 1);
+await deny('Dejar de acompañar por otra persona', U.caro, () => mustAffect(`delete from public.follows where follower_id = '${U.ana}'`));
+
+let hist;
+await allow('Publicar una historia', U.beto, async () => { hist = (await q(`insert into public.stories (author_id, text) values ('${U.beto}', 'ensayando') returning id`))[0].id; });
+await deny('Publicar una historia a nombre de otra persona', U.caro, () => q(`insert into public.stories (author_id, text) values ('${U.beto}', 'falsa')`));
+await expect('Quien acompaña ve la historia', U.ana, () => q(`select * from public.stories where id = '${hist}'`), (r) => r.length === 1);
+await expect('Quien NO acompaña no ve la historia', U.caro, () => q(`select * from public.stories where id = '${hist}'`), (r) => r.length === 0);
+await expect('El autor ve su propia historia', U.beto, () => q(`select * from public.stories where id = '${hist}'`), (r) => r.length === 1);
+await allow('Marcar una historia como vista', U.ana, () => q(`insert into public.story_views (story_id, user_id) values ('${hist}', '${U.ana}')`));
+await deny('Marcar vista una historia que no puede ver', U.caro, () => q(`insert into public.story_views (story_id, user_id) values ('${hist}', '${U.caro}')`));
+await expect('El autor ve cuántas personas vieron su historia', U.beto, () => q(`select * from public.story_views where story_id = '${hist}'`), (r) => r.length === 1);
+await expect('Nadie ve las marcas de vista ajenas', U.caro, () => q(`select * from public.story_views where story_id = '${hist}'`), (r) => r.length === 0);
+await deny('Borrar la historia de otra persona', U.caro, () => mustAffect(`delete from public.stories where id = '${hist}'`));
+await allow('Publicar (para la prueba) una historia con 30 horas', U.beto, () => q(`insert into public.stories (author_id, text, created_at) values ('${U.beto}', 'vieja', now() - interval '30 hours')`));
+await expect('Una historia de hace 30 horas ya no se ve', U.ana, () => q(`select * from public.stories where text = 'vieja'`), (r) => r.length === 0);
+await expect('Ni su propio autor la ve ya', U.beto, () => q(`select * from public.stories where text = 'vieja'`), (r) => r.length === 0);
+await deny('Subir la foto de una historia a la carpeta de otra persona', U.ana, () => q(`insert into storage.objects (bucket_id, name) values ('stories', '${U.beto}/s/1.webp')`));
+
+/* ---------------- 11. datos de la comunidad ---------------- */
+await deny('Un integrante cualquiera no edita los datos de la comunidad', U.caro, () => mustAffect(`update public.communities set phone = '0999999999' where id = '${priv}'`));
+await allow('Quien administra sí edita los datos', U.enny, () => mustAffect(`update public.communities set phone = '0999999999', show_contact = false where id = '${priv}'`));
+await expect('Con el contacto oculto, quien no es integrante no ve el teléfono', U.beto, () => q(`select phone from public.communities_public where id = '${priv}'`), (r) => r.length === 1 && r[0].phone === null);
+await expect('Los integrantes sí ven el teléfono', U.caro, () => q(`select phone from public.communities_public where id = '${priv}'`), (r) => r[0].phone === '0999999999');
+
 /* ---------------- resultado ---------------- */
 results.forEach(([s, n]) => console.log(`${s} ${n}`));
 console.log(`\n${pass} pruebas pasaron · ${failed} fallaron`);

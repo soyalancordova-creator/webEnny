@@ -44,7 +44,7 @@ export async function renderPlayer(ctx, view, [id]) {
       view.innerHTML = `<div class="cx-card cx-pad" style="max-width:560px;margin:3rem auto;text-align:center">${icon('lock')}
         <h2 style="margin:.7rem 0 .5rem;font-size:1.7rem">Esta obra es parte de la suscripción</h2>
         <p class="muted" style="margin-bottom:1.4rem">Con un plan tienes toda la biblioteca: reproducción, loop, velocidad, metrónomo y grabaciones de Enny sincronizadas.</p>
-        <div class="cx-row" style="justify-content:center"><a class="btn btn-fill" href="#/planes"><span>Ver planes</span></a><a class="btn btn-ghost" href="#/biblioteca"><span>Volver</span></a></div></div>`;
+        <div class="cx-row" style="justify-content:center"><a class="btn btn-fill" href="#/ajustes/suscripcion"><span>Ver planes</span></a><a class="btn btn-ghost" href="#/biblioteca"><span>Volver</span></a></div></div>`;
       return;
     }
     view.className = 'cx-view'; empty(view, 'info', e.message); return;

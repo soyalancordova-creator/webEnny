@@ -53,7 +53,7 @@ export async function renderPlans(ctx, view) {
     </section>` : '';
 
   view.innerHTML = `<div style="max-width:1100px;margin:0 auto">
-    <div class="cx-h" style="justify-content:center;text-align:center"><div><span class="eyebrow">La academia</span><h1>Aprende con toda la biblioteca</h1>
+    <div class="cx-h" style="justify-content:center;text-align:center"><div><span class="eyebrow">Suscripción</span><h1>Toda la biblioteca, siempre contigo</h1>
       <p style="max-width:52ch;margin-inline:auto">La comunidad es gratis para siempre. La suscripción abre las partituras, el reproductor y las grabaciones.</p></div></div>
     ${current}
     ${me.isAdmin ? '<p class="center muted" style="margin-bottom:1.4rem">Eres administradora: ya tienes acceso completo.</p>' : ''}
@@ -63,7 +63,8 @@ export async function renderPlans(ctx, view) {
       <div class="price"><b>$${p.price.toFixed(2)}</b><span>${p.per}</span></div>
       <div class="save">${p.save}</div>
       <ul>${FEATURES.map((f) => `<li>${icon('check')}<span>${f}</span></li>`).join('')}</ul>
-      <div class="pp" id="pp-${p.id}">${sub && sub.plan === p.id && sub.status === 'active' ? '<button class="btn btn-ghost" disabled style="width:100%"><span>Tu plan actual</span></button>'
+      <div class="pp" id="pp-${p.id}">${sub && sub.plan === p.id && sub.status === 'active' ? `<button class="btn btn-ghost" disabled style="width:100%"><span>${icon('check')} Tu plan actual</span></button>`
+        : sub && sub.status === 'active' ? '<p class="muted" style="font-size:.82rem;text-align:center;line-height:1.5">Para cambiarte a este plan, cancela el actual: seguirás con acceso hasta que termine el periodo pagado y luego eliges este.</p>'
         : demo ? `<button class="btn btn-fill" data-demo="${p.id}" style="width:100%"><span>Suscribirme · pago simulado</span></button>`
         : paypalReady ? '<div class="spin"></div>' : '<p class="muted" style="font-size:.84rem;text-align:center">Los pagos se están configurando. Escríbenos por WhatsApp para suscribirte.</p>'}</div>
     </article>`).join('')}</div>
@@ -86,7 +87,7 @@ export async function renderPlans(ctx, view) {
     try { await ctx.store.cancelSubscription(); await ctx.refreshMe(); toast('Suscripción cancelada.'); renderPlans(ctx, view); } catch (e) { toast(e.message); }
   };
 
-  if (paypalReady && !me.isAdmin) {
+  if (paypalReady && !me.isAdmin && !(sub && sub.status === 'active')) {
     try {
       const paypal = await loadPayPal(cfg.PAYPAL_CLIENT_ID);
       PLANS.forEach((p) => {
@@ -99,7 +100,7 @@ export async function renderPlans(ctx, view) {
           createSubscription: (data, actions) => actions.subscription.create({ plan_id: planIds[p.id], custom_id: me.id }),
           onApprove: async (data) => {
             toast('Confirmando tu pago…');
-            try { await ctx.store.activatePayPal(data.subscriptionID); await ctx.refreshMe(); toast('¡Bienvenida a la academia! Tu suscripción está activa. 🙌'); renderPlans(ctx, view); }
+            try { await ctx.store.activatePayPal(data.subscriptionID); await ctx.refreshMe(); toast('¡Bienvenida a Hosannia! Tu suscripción está activa. 🙌'); renderPlans(ctx, view); }
             catch (e) { toast(e.message); }
           },
           onError: () => toast('PayPal no pudo completar el pago. No se hizo ningún cobro.'),

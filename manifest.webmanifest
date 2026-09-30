@@ -1,0 +1,22 @@
+{
+  "name": "Hosannia",
+  "short_name": "Hosannia",
+  "description": "Partituras que suenan, comunidad que edifica.",
+  "start_url": "campus.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0D1321",
+  "theme_color": "#0D1321",
+  "lang": "es",
+  "categories": ["music", "education", "social"],
+  "icons": [
+    { "src": "public/img/hosannia-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "public/img/hosannia-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "public/img/hosannia-icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Biblioteca", "url": "campus.html#/biblioteca" },
+    { "name": "Comunidad", "url": "campus.html#/comunidad" }
+  ]
+}

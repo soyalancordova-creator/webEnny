@@ -15,9 +15,16 @@ export async function renderProfile(ctx, view, [id]) {
   const social = p.social ? (/^https?:\/\//.test(p.social) ? p.social : `https://${p.social}`) : '';
   view.innerHTML = `<div style="max-width:1080px;margin:0 auto">
     <div class="pf-cover">${p.cover ? `<img src="${esc(p.cover)}" alt="">` : ''}</div>
-    <div class="pf-head">${avatar(p, 'xl')}
-      <div class="who"><h1>${esc(p.name)}</h1><div class="role">${esc(p.service || '')}</div></div>
-      ${p.isMe ? `<a class="btn btn-ghost btn-sm" href="#/editar-perfil"><span>${icon('edit')} Editar perfil</span></a>` : ''}
+    <div class="pf-head">
+      <span class="pf-av">${avatar(p, 'xl')}</span>
+      <div class="who"><h1>${esc(p.name)}</h1>
+        <div class="role">${esc(p.service || (p.role === 'admin' ? 'Docente' : 'Integrante'))}</div>
+        <div class="pf-counts"><b>${p.stats.followers}</b> <span>${p.stats.followers === 1 ? 'te acompaña' : 'lo acompañan'}</span> · <b>${p.stats.following}</b> <span>acompaña</span></div>
+      </div>
+      <div class="pf-acts">
+        ${p.isMe ? `<a class="btn btn-ghost btn-sm" href="#/editar-perfil"><span>${icon('edit')} Editar perfil</span></a>`
+          : `<button class="btn ${p.iFollow ? 'btn-ghost' : 'btn-fill'} btn-sm" id="fw"><span>${p.iFollow ? icon('check') + ' Acompañando' : icon('hands') + ' Acompañar'}</span></button>`}
+      </div>
     </div>
     <div class="pf-grid">
       <aside style="display:grid;gap:1rem">
@@ -28,13 +35,32 @@ export async function renderProfile(ctx, view, [id]) {
             ${p.church ? `<div>${icon('church')}${esc(p.church)}</div>` : ''}
             ${p.city ? `<div>${icon('map')}${esc(p.city)}</div>` : ''}
             ${social ? `<div>${icon('link')}<a href="${esc(social)}" target="_blank" rel="noopener nofollow" style="color:var(--wine)">${esc(p.social)}</a></div>` : ''}
-            <div>${icon('calendar')}En la academia desde ${esc(since)}</div>
+            <div>${icon('calendar')}En Hosannia desde ${esc(since)}</div>
           </div>`}
-          <div class="pf-stats"><div><b>${p.stats.posts}</b><small>Publicaciones</small></div><div><b>${p.stats.groups}</b><small>Comunidades</small></div><div><b>${p.role === 'admin' ? '✦' : '♪'}</b><small>${p.role === 'admin' ? 'Docente' : 'Alumno'}</small></div></div>
+          <div class="pf-stats"><div><b>${p.stats.posts}</b><small>Publicaciones</small></div><div><b>${p.stats.groups}</b><small>Comunidades</small></div><div><b>${p.stats.amens}</b><small>Reacciones</small></div></div>
         </section>
+        <section class="cx-card cx-pad"><h3 style="font-size:1.05rem;margin-bottom:.6rem">A quién acompaña</h3><div class="mini-list" id="pFollow"></div></section>
       </aside>
       <div class="fd-col" id="pList"></div>
     </div></div>`;
+
+  const fw = $('#fw', view);
+  if (fw) fw.onclick = async () => {
+    fw.disabled = true;
+    try {
+      const on = await ctx.store.follow(p.id);
+      toast(on ? `Ahora acompañas a ${p.name.split(' ')[0]}.` : 'Dejaste de acompañar.');
+      renderProfile(ctx, view, [id]);
+    } catch (e) { toast(e.message); fw.disabled = false; }
+  };
+
+  ctx.store.listFollow(id, 'following').then((list) => {
+    const box = $('#pFollow', view); if (!box) return;
+    box.innerHTML = list.length
+      ? list.slice(0, 6).map((u) => `<a href="#/perfil/${esc(u.id)}">${avatar(u, 'sm')}<div style="min-width:0"><b>${esc(u.name)}</b><small>${esc(u.service || '')}</small></div></a>`).join('')
+      : '<p class="muted" style="font-size:.86rem">Todavía no acompaña a nadie.</p>';
+  }).catch(() => {});
+
   if (p.hidden) { empty($('#pList', view), 'lock', 'Las publicaciones de este perfil son privadas.'); return; }
   await mountList($('#pList', view), ctx, { authorId: id }, p.isMe ? 'Aún no publicas nada. Comparte tu primera reflexión en Inicio.' : 'Todavía no hay publicaciones.');
 }

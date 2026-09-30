@@ -298,7 +298,7 @@ create policy "rep: admin" on public.reports for all to authenticated using (pub
 create table if not exists public.notifications (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid references auth.users(id) on delete cascade,   -- null = aviso para todos
-  kind       text not null check (kind in ('broadcast','reaction','comment','group','system')),
+  kind       text not null check (kind in ('broadcast','reaction','comment','group','system','follow')),
   title      text not null check (char_length(title) <= 160),
   body       text not null default '' check (char_length(body) <= 600),
   link       text not null default '' check (char_length(link) <= 200 and (link = '' or link like '#/%')),
@@ -317,6 +317,11 @@ drop policy if exists "nt: ver"     on public.notifications;
 drop policy if exists "nt: avisar"  on public.notifications;
 drop policy if exists "nt: borrar"  on public.notifications;
 create policy "nt: ver"    on public.notifications for select to authenticated using (user_id = auth.uid() or user_id is null);
+-- si la tabla ya existía, el tipo 'follow' hay que agregarlo a mano
+alter table public.notifications drop constraint if exists notifications_kind_check;
+alter table public.notifications add constraint notifications_kind_check
+  check (kind in ('broadcast','reaction','comment','group','system','follow'));
+
 -- desde el navegador solo un admin puede crear avisos generales; los personales los crean triggers
 create policy "nt: avisar" on public.notifications for insert to authenticated with check (public.is_admin() and user_id is null and kind = 'broadcast');
 create policy "nt: borrar" on public.notifications for delete to authenticated using (public.is_admin());
@@ -586,3 +591,143 @@ create or replace view public.campus_stats with (security_invoker = true) as
     (select count(*) from public.communities)                                             as groups,
     (select count(*) from public.reports where status = 'open')                           as reports;
 revoke all on public.campus_stats from anon;
+
+-- ------------------------------------------------------------
+-- 11. HOSANNIA · acompañar (seguir) e historias de 24 h
+--     + datos de contacto de cada comunidad, con su visibilidad
+-- ------------------------------------------------------------
+
+-- 11.1 datos de la comunidad: los edita su administración, no el sitio
+alter table public.communities add column if not exists kind     text not null default 'grupo' check (kind in ('grupo','iglesia'));
+alter table public.communities add column if not exists phone    text check (phone    is null or char_length(phone)    <= 40);
+alter table public.communities add column if not exists email    text check (email    is null or char_length(email)    <= 120);
+alter table public.communities add column if not exists address  text check (address  is null or char_length(address)  <= 160);
+alter table public.communities add column if not exists schedule text check (schedule is null or char_length(schedule) <= 160);
+alter table public.communities add column if not exists site     text check (site     is null or char_length(site)     <= 160);
+-- qué sale del grupo hacia quien no es integrante
+alter table public.communities add column if not exists show_contact  boolean not null default true;
+alter table public.communities add column if not exists show_address  boolean not null default true;
+alter table public.communities add column if not exists show_schedule boolean not null default true;
+alter table public.communities add column if not exists show_members  boolean not null default true;
+
+-- La tabla se lee entera (la política "com: ver" es abierta a autenticados), así que
+-- los datos ocultos se tapan en esta vista y el front SIEMPRE lee de aquí.
+drop view if exists public.communities_public;
+create view public.communities_public as
+  select c.id, c.name, c.description, c.rules, c.privacy, c.cover_url, c.owner_id, c.created_at, c.kind,
+         c.show_contact, c.show_address, c.show_schedule, c.show_members,
+         case when c.show_contact  or public.is_member(c.id) then c.phone    end as phone,
+         case when c.show_contact  or public.is_member(c.id) then c.email    end as email,
+         case when c.show_contact  or public.is_member(c.id) then c.site     end as site,
+         case when c.show_address  or public.is_member(c.id) then c.address  end as address,
+         case when c.show_schedule or public.is_member(c.id) then c.schedule end as schedule
+  from public.communities c;
+revoke all on public.communities_public from anon;
+grant select on public.communities_public to authenticated;
+
+-- 11.2 acompañar: seguir a alguien para ver sus historias
+create table if not exists public.follows (
+  follower_id uuid not null references auth.users(id) on delete cascade,
+  target_id   uuid not null references auth.users(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (follower_id, target_id),
+  check (follower_id <> target_id)
+);
+create index if not exists follows_target_idx on public.follows (target_id);
+alter table public.follows enable row level security;
+
+drop policy if exists "fw: ver"      on public.follows;
+drop policy if exists "fw: acompañar" on public.follows;
+drop policy if exists "fw: dejar"    on public.follows;
+create policy "fw: ver"       on public.follows for select to authenticated using (true);
+-- nadie puede "hacer" que otra persona acompañe a alguien
+create policy "fw: acompañar" on public.follows for insert to authenticated with check (follower_id = auth.uid());
+create policy "fw: dejar"     on public.follows for delete to authenticated using (follower_id = auth.uid());
+
+-- aviso de que alguien te acompaña (lo crea la base, no el navegador)
+create or replace function public.notify_follow() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (user_id, kind, title, link, actor_id)
+  values (new.target_id, 'follow', public.display_name(new.follower_id) || ' ahora te acompaña',
+          '#/perfil/' || new.follower_id, new.follower_id);
+  return new;
+end $$;
+drop trigger if exists follow_notify on public.follows;
+create trigger follow_notify after insert on public.follows
+  for each row execute function public.notify_follow();
+
+-- 11.3 historias: duran 24 horas y las ven quienes te acompañan
+create table if not exists public.stories (
+  id         uuid primary key default gen_random_uuid(),
+  author_id  uuid not null references auth.users(id) on delete cascade,
+  text       text not null default '' check (char_length(text) <= 200),
+  image_path text,
+  created_at timestamptz not null default now(),
+  check (char_length(text) > 0 or image_path is not null)
+);
+create index if not exists stories_author_idx on public.stories (author_id, created_at desc);
+
+create table if not exists public.story_views (
+  story_id uuid not null references public.stories(id) on delete cascade,
+  user_id  uuid not null references auth.users(id) on delete cascade,
+  seen_at  timestamptz not null default now(),
+  primary key (story_id, user_id)
+);
+
+alter table public.stories     enable row level security;
+alter table public.story_views enable row level security;
+
+-- ¿puedo ver esta historia? mía, o de alguien que acompaño, o de la docente
+create or replace function public.can_see_story(author uuid, created timestamptz) returns boolean
+language sql stable security definer set search_path = public as $$
+  select created > now() - interval '24 hours'
+     and (author = auth.uid()
+          or exists (select 1 from public.follows f where f.follower_id = auth.uid() and f.target_id = author)
+          or exists (select 1 from public.profiles p where p.id = author and p.role = 'admin'));
+$$;
+revoke execute on function public.can_see_story(uuid, timestamptz) from anon;
+grant  execute on function public.can_see_story(uuid, timestamptz) to authenticated;
+
+drop policy if exists "st: ver"      on public.stories;
+drop policy if exists "st: publicar" on public.stories;
+drop policy if exists "st: borrar"   on public.stories;
+create policy "st: ver"      on public.stories for select to authenticated
+  using (public.can_see_story(author_id, created_at) or public.is_admin());
+create policy "st: publicar" on public.stories for insert to authenticated with check (author_id = auth.uid());
+create policy "st: borrar"   on public.stories for delete to authenticated
+  using (author_id = auth.uid() or public.is_admin());
+
+drop policy if exists "stv: ver"     on public.story_views;
+drop policy if exists "stv: marcar"  on public.story_views;
+-- quien publicó ve cuántas personas la vieron; cada quien ve sus propias marcas
+create policy "stv: ver"    on public.story_views for select to authenticated using (
+  user_id = auth.uid() or exists (select 1 from public.stories s where s.id = story_id and s.author_id = auth.uid()));
+create policy "stv: marcar" on public.story_views for insert to authenticated with check (
+  user_id = auth.uid() and exists (select 1 from public.stories s where s.id = story_id and public.can_see_story(s.author_id, s.created_at)));
+
+-- máximo 10 historias por minuto
+create trigger rl_stories before insert on public.stories for each row execute function public.rate_limit('10', 'author_id');
+
+-- fotos de historias: privadas, cada quien escribe bajo su uid
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
+  ('stories', 'stories', false, 5242880, array['image/webp','image/jpeg','image/png'])
+on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "st: subir"  on storage.objects;
+drop policy if exists "st: mirar"  on storage.objects;
+drop policy if exists "st: quitar" on storage.objects;
+create policy "st: subir"  on storage.objects for insert to authenticated
+  with check (bucket_id = 'stories' and public.storage_path_owner(name) = auth.uid());
+create policy "st: mirar"  on storage.objects for select to authenticated
+  using (bucket_id = 'stories' and exists (select 1 from public.stories s where s.image_path = name));
+create policy "st: quitar" on storage.objects for delete to authenticated
+  using (bucket_id = 'stories' and (public.storage_path_owner(name) = auth.uid() or public.is_admin()));
+
+-- limpieza: borra historias vencidas (ejecutar desde un cron de Supabase, opcional)
+create or replace function public.purge_stories() returns integer
+language sql security definer set search_path = public as $$
+  with gone as (delete from public.stories where created_at < now() - interval '48 hours' returning 1)
+  select count(*)::int from gone;
+$$;
+revoke execute on function public.purge_stories() from anon, authenticated;

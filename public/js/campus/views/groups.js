@@ -9,16 +9,20 @@ import { composer, mountList, prependPost } from './feed.js';
 function cover(g) { return g.cover ? `<img src="${esc(g.cover)}" alt="">` : ''; }
 function privacyLabel(g) { return g.privacy === 'private' ? `${icon('lock')}Privada` : `${icon('globe')}Pública`; }
 
+const isChurch = (g) => (g.info && g.info.kind) === 'iglesia';
+/** En una iglesia no se dice "unirme": se dice congregarme. */
+export const joinWord = (g) => (g.privacy === 'private' ? 'Solicitar acceso' : isChurch(g) ? 'Congregarme' : 'Unirme');
+
 function joinButton(g) {
   if (g.myStatus === 'active') return '';
   if (g.myStatus === 'pending') return '<button class="btn btn-ghost btn-sm" disabled><span>Solicitud enviada</span></button>';
-  return `<button class="btn btn-fill btn-sm" data-join><span>${g.privacy === 'private' ? 'Solicitar acceso' : 'Unirme'}</span></button>`;
+  return `<button class="btn btn-fill btn-sm" data-join><span>${joinWord(g)}</span></button>`;
 }
 
 async function doJoin(ctx, g, after) {
   try {
     const st = await ctx.store.joinGroup(g.id);
-    toast(st === 'active' ? `Te uniste a ${g.name}.` : 'Solicitud enviada. Te avisamos cuando te acepten.');
+    toast(st === 'active' ? (isChurch(g) ? `Ya te congregas en ${g.name}.` : `Te uniste a ${g.name}.`) : 'Solicitud enviada. Te avisamos cuando te acepten.');
     after();
   } catch (e) { toast(e.message); }
 }
@@ -54,6 +58,7 @@ export async function renderGroups(ctx, view) {
 function createGroupDialog(ctx) {
   let coverImg = null;
   const m = modal({ title: 'Crear una comunidad', body: `<div style="display:grid;gap:.9rem">
+    <div class="fld"><label>¿Qué estás creando?</label><select id="gK"><option value="grupo">Un grupo · ministerio, taller o tema</option><option value="iglesia">Una iglesia · congregación con sus servicios</option></select></div>
     <div class="fld"><label>Nombre</label><input id="gN" maxlength="60" placeholder="Ej. Violinistas de adoración"></div>
     <div class="fld"><label>Propósito</label><textarea id="gD" maxlength="400" placeholder="¿Qué conversaciones tendrá esta comunidad?"></textarea></div>
     <div class="fld"><label>Normas (opcional)</label><textarea id="gR" maxlength="800" style="min-height:80px" placeholder="Ej. Hablamos con gracia. Lo que se comparte en oración, se queda aquí."></textarea></div>
@@ -64,8 +69,8 @@ function createGroupDialog(ctx) {
   $('#gGo', m.body).onclick = async (e) => {
     const b = e.currentTarget; b.disabled = true;
     try {
-      const g = await ctx.store.createGroup({ name: $('#gN', m.body).value, description: $('#gD', m.body).value, rules: $('#gR', m.body).value, privacy: $('#gP', m.body).value, cover: coverImg });
-      m.close(); toast('Comunidad creada.'); ctx.go(`#/comunidad/${g.id}`);
+      const g = await ctx.store.createGroup({ name: $('#gN', m.body).value, description: $('#gD', m.body).value, rules: $('#gR', m.body).value, privacy: $('#gP', m.body).value, cover: coverImg, kind: $('#gK', m.body).value });
+      m.close(); toast('Comunidad creada. Completa sus datos en Configuración.'); ctx.go(`#/comunidad/${g.id}/ajustes`);
     } catch (err) { toast(err.message); b.disabled = false; }
   };
 }
@@ -85,7 +90,7 @@ export async function renderGroup(ctx, view, [id, tab]) {
       ${member && g.myRole !== 'owner' ? `<button class="btn btn-ghost btn-sm" data-leave style="color:#fff;border-color:rgba(255,255,255,.4)"><span>Salir</span></button>` : ''}</div>
     </div>
     <nav class="gp-tabs" role="tablist">
-      ${[['chat', 'comment', 'Chat'], ['publicaciones', 'feed', 'Publicaciones'], ['integrantes', 'users', `Integrantes <span class="n">${g.members}${g.canManage && g.pending ? ` · ${g.pending} por aprobar` : ''}</span>`], ['info', 'info', 'Información']]
+      ${[['chat', 'comment', 'Chat'], ['publicaciones', 'feed', 'Publicaciones'], ['integrantes', 'users', `Integrantes <span class="n">${g.showMembers ? g.members : '·'}${g.canManage && g.pending ? ` · ${g.pending} por aprobar` : ''}</span>`], ['info', 'info', 'Información'], ...(g.canManage ? [['ajustes', 'settings', 'Configuración']] : [])]
         .map(([k, ic, l]) => `<button class="${k === tab ? 'on' : ''}" data-tab="${k}" role="tab">${icon(ic)}${l}</button>`).join('')}
     </nav>
     <div class="gp-grid"><div id="tabBody" style="min-width:0"></div><aside id="gside" style="display:grid;gap:1rem"></aside></div>
@@ -101,6 +106,7 @@ export async function renderGroup(ctx, view, [id, tab]) {
   if (tab === 'chat') return chatTab(ctx, g, body);
   if (tab === 'integrantes') return membersTab(ctx, g, body, view);
   if (tab === 'info') return infoTab(g, body);
+  if (tab === 'ajustes') return settingsTab(ctx, g, body, view);
   return postsTab(ctx, g, body);
 }
 
@@ -108,6 +114,7 @@ async function sidebar(ctx, g, el) {
   el.innerHTML = `<section class="cx-card cx-pad"><h3 style="font-size:1.05rem;margin-bottom:.4rem">Sobre esta comunidad</h3><p class="muted" style="font-size:.88rem;line-height:1.6">${richText(g.description)}</p>
     ${g.rules ? `<h4 style="font-family:var(--sans);font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);font-weight:400;margin:1rem 0 .4rem">Normas</h4><p class="muted" style="font-size:.85rem;line-height:1.55;white-space:pre-wrap">${esc(g.rules)}</p>` : ''}</section>
     <section class="cx-card cx-pad"><div class="cx-row" style="justify-content:space-between"><h3 style="font-size:1.05rem">Integrantes</h3><a class="cx-chip" href="#/comunidad/${esc(g.id)}/integrantes">Ver todos</a></div><div class="mini-list" id="memPrev"></div></section>`;
+  if (!g.showMembers) { $('#memPrev', el).innerHTML = '<p class="muted" style="font-size:.84rem">La lista de integrantes es solo para quienes pertenecen a la comunidad.</p>'; return; }
   try {
     const ms = (await ctx.store.listMembers(g.id)).filter((m) => m.status === 'active').slice(0, 6);
     $('#memPrev', el).innerHTML = ms.map((m) => `<a href="#/perfil/${esc(m.user.id)}">${avatar(m.user, 'sm')}<div style="min-width:0"><b>${esc(m.user.name)}</b><small>${m.role === 'owner' ? 'Fundadora' : m.role === 'admin' ? 'Moderación' : esc(m.user.service || 'Integrante')}</small></div></a>`).join('');
@@ -115,12 +122,82 @@ async function sidebar(ctx, g, el) {
 }
 
 function infoTab(g, el) {
+  const i = g.info || {};
+  const line = (ic, v, href) => (v ? `<div>${icon(ic)}${href ? `<a href="${esc(href)}" target="_blank" rel="noopener" style="color:var(--wine)">${esc(v)}</a>` : esc(v)}</div>` : '');
+  const contacto = [line('map', i.address), line('clock', i.schedule), line('phone', i.phone, i.phone ? `tel:${i.phone.replace(/\s/g, '')}` : ''), line('mail', i.email, i.email ? `mailto:${i.email}` : ''), line('link', i.site, i.site ? (/^https?:/.test(i.site) ? i.site : `https://${i.site}`) : '')].join('');
   el.innerHTML = `<section class="cx-card cx-pad" style="display:grid;gap:1rem">
-    <div><span class="eyebrow">Propósito</span><p style="margin-top:.5rem;line-height:1.7">${richText(g.description)}</p></div>
+    <div><span class="eyebrow">${g.info && g.info.kind === 'iglesia' ? 'La congregación' : 'Propósito'}</span><p style="margin-top:.5rem;line-height:1.7">${richText(g.description)}</p></div>
+    ${contacto ? `<div><span class="eyebrow">Dónde encontrarnos</span><div class="pf-facts" style="margin-top:.5rem">${contacto}</div></div>` : ''}
     ${g.rules ? `<div><span class="eyebrow">Normas</span><p style="margin-top:.5rem;white-space:pre-wrap;line-height:1.7">${esc(g.rules)}</p></div>` : ''}
     <div class="pf-facts"><div>${icon(g.privacy === 'private' ? 'lock' : 'globe')}${g.privacy === 'private' ? 'Privada: cada ingreso lo aprueba quien la administra. Solo los integrantes ven el chat.' : 'Pública: cualquier persona con cuenta puede unirse y leer las publicaciones.'}</div>
       <div>${icon('calendar')}Creada el ${new Date(g.created_at).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
       <div>${icon('user')}Fundada por ${esc(g.owner ? g.owner.name : '')}</div></div></section>`;
+}
+
+/* ---------- configuración interna de la comunidad ---------- */
+function settingsTab(ctx, g, el, view) {
+  const i = g.info || {}, show = g.show || {};
+  const sw = (k, on, label, help) => `<div class="set-row"><div><b>${esc(label)}</b><small>${esc(help)}</small></div>
+    <button class="sw${on ? ' on' : ''}" data-show="${k}" role="switch" aria-checked="${!!on}" aria-label="${esc(label)}"></button></div>`;
+  el.innerHTML = `<section class="cx-card cx-pad set-card">
+      <h3>${icon('settings')} Datos de la comunidad</h3>
+      <form id="gForm" style="display:grid;gap:.9rem">
+        <div class="two"><div class="fld"><label>Nombre</label><input name="name" maxlength="60" value="${esc(g.name)}"></div>
+          <div class="fld"><label>Tipo</label><select name="kind"><option value="grupo"${i.kind !== 'iglesia' ? ' selected' : ''}>Grupo</option><option value="iglesia"${i.kind === 'iglesia' ? ' selected' : ''}>Iglesia</option></select></div></div>
+        <div class="fld"><label>Propósito</label><textarea name="description" maxlength="400">${esc(g.description)}</textarea></div>
+        <div class="fld"><label>Normas</label><textarea name="rules" maxlength="800">${esc(g.rules || '')}</textarea></div>
+        <div class="two"><div class="fld"><label>Dirección</label><input name="address" maxlength="160" value="${esc(i.address || '')}" placeholder="Calle, ciudad"></div>
+          <div class="fld"><label>Horarios</label><input name="schedule" maxlength="160" value="${esc(i.schedule || '')}" placeholder="Domingos 10:00 · Ensayo jueves 19:00"></div></div>
+        <div class="two"><div class="fld"><label>Teléfono</label><input name="phone" maxlength="40" value="${esc(i.phone || '')}"></div>
+          <div class="fld"><label>Correo</label><input name="email" type="email" maxlength="120" value="${esc(i.email || '')}"></div></div>
+        <div class="two"><div class="fld"><label>Sitio o red social</label><input name="site" maxlength="160" value="${esc(i.site || '')}"></div>
+          <div class="fld"><label>Privacidad</label><select name="privacy"><option value="public"${g.privacy !== 'private' ? ' selected' : ''}>Pública · cualquiera entra</option><option value="private"${g.privacy === 'private' ? ' selected' : ''}>Privada · se aprueba cada ingreso</option></select></div></div>
+        <div class="cx-row" style="justify-content:space-between;align-items:center">
+          <label class="btn btn-ghost btn-sm"><span>${icon('image')} Cambiar portada</span><input type="file" accept="image/*" hidden id="gCov"></label>
+          <button class="btn btn-fill btn-sm"><span>Guardar cambios</span></button></div>
+      </form>
+    </section>
+    <section class="cx-card cx-pad set-card">
+      <h3>${icon('eye')} Qué ve quien no es integrante</h3>
+      <p class="muted" style="margin-bottom:.4rem">Ustedes deciden qué datos salen del grupo. Los integrantes siempre los ven.</p>
+      ${sw('address', show.address !== false, 'Dirección', 'Dónde se reúnen.')}
+      ${sw('schedule', show.schedule !== false, 'Horarios', 'Servicios y ensayos.')}
+      ${sw('contact', show.contact !== false, 'Teléfono, correo y sitio', 'Datos para contactarlos.')}
+      ${sw('members', show.members !== false, 'Lista de integrantes', 'Quiénes pertenecen a la comunidad.')}
+    </section>
+    ${g.myRole === 'owner' || ctx.me.isAdmin ? `<section class="cx-card cx-pad set-card">
+      <h3>${icon('trash')} Eliminar comunidad</h3>
+      <p class="muted">Se borran sus publicaciones y su chat. No se puede deshacer.</p>
+      <button class="btn btn-ghost btn-sm" id="gDel" style="color:var(--err);border-color:var(--err)"><span>Eliminar ${esc(g.name)}</span></button>
+    </section>` : ''}`;
+
+  const reload = () => renderGroup(ctx, view, [g.id, 'ajustes']);
+  $('#gForm', el).onsubmit = async (e) => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target));
+    try {
+      await ctx.store.updateGroup(g.id, { name: d.name, description: d.description, rules: d.rules, privacy: d.privacy,
+        info: { kind: d.kind, address: d.address, schedule: d.schedule, phone: d.phone, email: d.email, site: d.site } });
+      toast('Comunidad actualizada.'); reload();
+    } catch (err) { toast(err.message); }
+  };
+  $('#gCov', el).onchange = async (e) => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try { const cover = await compressImage(f, { maxSide: 1600, quality: 0.8 }); await ctx.store.updateGroup(g.id, { cover }); toast('Portada actualizada.'); reload(); }
+    catch (err) { toast(err.message); }
+  };
+  $$('[data-show]', el).forEach((b) => {
+    b.onclick = async () => {
+      const on = !b.classList.contains('on');
+      try { await ctx.store.updateGroup(g.id, { show: { [b.dataset.show]: on } }); b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }
+      catch (err) { toast(err.message); }
+    };
+  });
+  const del = $('#gDel', el);
+  if (del) del.onclick = async () => {
+    if (!(await confirmBox(`¿Eliminar ${g.name} con todo su contenido?`, 'Eliminar'))) return;
+    try { await ctx.store.deleteGroup(g.id); toast('Comunidad eliminada.'); ctx.go('#/comunidades'); } catch (err) { toast(err.message); }
+  };
 }
 
 async function postsTab(ctx, g, el) {
@@ -135,7 +212,7 @@ async function postsTab(ctx, g, el) {
 function lockedCard(g) {
   return `<div class="cx-card ch-lock">${icon('lock')}<h3 style="margin:.6rem 0 .4rem">${g.privacy === 'private' ? 'Comunidad privada' : 'Únete para conversar'}</h3>
     <p class="muted" style="max-width:40ch;margin:0 auto 1.2rem">${g.myStatus === 'pending' ? 'Tu solicitud está pendiente. Te avisamos cuando te acepten.' : g.privacy === 'private' ? 'Solo los integrantes aprobados ven el chat y las publicaciones.' : 'El chat es para integrantes. Únete para escribir y leer.'}</p>
-    ${g.myStatus === 'pending' ? '' : `<button class="btn btn-fill btn-sm" data-join2><span>${g.privacy === 'private' ? 'Solicitar acceso' : 'Unirme'}</span></button>`}</div>`;
+    ${g.myStatus === 'pending' ? '' : `<button class="btn btn-fill btn-sm" data-join2><span>${joinWord(g)}</span></button>`}</div>`;
 }
 
 async function membersTab(ctx, g, el, view) {

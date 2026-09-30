@@ -1,4 +1,4 @@
-/* NOTIFICACIONES · actividad personal + avisos de la academia */
+/* NOTIFICACIONES · actividad personal + avisos de Hosannia */
 import { icon } from '../icons.js';
 import { $, $$, esc, ago, avatar, loading, empty, toast } from '../ui.js';
 
@@ -7,7 +7,7 @@ const ICON = { broadcast: 'megaphone', reaction: 'heart', comment: 'comment', gr
 export async function renderNotifications(ctx, view) {
   ctx.setTitle('Notificaciones');
   view.innerHTML = `<div style="max-width:760px;margin:0 auto">
-    <div class="cx-h"><div><span class="eyebrow">Tu actividad</span><h1>Notificaciones</h1><p>Reacciones, comentarios, comunidades y avisos de la academia.</p></div>
+    <div class="cx-h"><div><span class="eyebrow">Tu actividad</span><h1>Notificaciones</h1><p>Reacciones, comentarios, comunidades y avisos de Hosannia.</p></div>
       <button class="btn btn-ghost btn-sm" id="all"><span>${icon('check')} Marcar todo como leído</span></button></div>
     <div class="nt" id="nt"></div></div>`;
   const box = $('#nt', view);

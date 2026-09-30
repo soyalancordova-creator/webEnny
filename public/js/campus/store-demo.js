@@ -35,6 +35,9 @@ function seed() {
     { id: 'g-violin', name: 'Violinistas de adoración', description: 'Técnica, repertorio y preguntas para quienes sirven con el violín en su iglesia.', privacy: 'public', cover: 'public/img/enny-tocando.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 120), rules: 'Preguntas de todo nivel son bienvenidas.' },
     { id: 'g-teclas', name: 'Teclas que adoran', description: 'Armonía, pads y arreglos para acompañar a la congregación desde el piano.', privacy: 'public', cover: '', owner: 'u-sara', created_at: ago(60 * 24 * 70), rules: '' },
     { id: 'g-lectura', name: 'Lectura con propósito', description: 'Reto semanal de lectura a primera vista. Cada lunes una partitura nueva.', privacy: 'public', cover: 'public/img/enny-partituras.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 40), rules: '' },
+    { id: 'g-camino', name: 'Iglesia El Camino · Alabanza', description: 'Equipo de alabanza de la Iglesia El Camino. Ensayos, repertorio del domingo y avisos del ministerio.', privacy: 'public', cover: '', owner: 'u-daniela', created_at: ago(60 * 24 * 55), rules: 'Puntualidad en los ensayos. El repertorio se cierra el jueves.',
+      info: { kind: 'iglesia', phone: '+593 99 000 0000', email: 'alabanza@elcamino.org', address: 'Av. de las Américas 1234, Bogotá', schedule: 'Domingos 9:00 y 11:00 · Ensayo jueves 19:00', site: '' },
+      show: { contact: true, address: true, schedule: true, members: true } },
   ];
   const m = (g, u, role = 'member', status = 'active', d = 30) => ({ group_id: g, user_id: u, role, status, joined_at: ago(60 * 24 * d) });
   const members = [
@@ -42,6 +45,7 @@ function seed() {
     m('g-violin', 'u-enny', 'owner'), m('g-violin', 'u-daniela'), m('g-violin', 'u-demo', 'member', 'active', 11), m('g-violin', 'u-mateo'),
     m('g-teclas', 'u-sara', 'owner'), m('g-teclas', 'u-mateo'),
     m('g-lectura', 'u-enny', 'owner'), m('g-lectura', 'u-elena'), m('g-lectura', 'u-sara'),
+    m('g-camino', 'u-daniela', 'owner'), m('g-camino', 'u-josue'), m('g-camino', 'u-mateo'),
   ];
   const posts = [
     { id: 'p1', author: 'u-enny', type: 'reflexion', group: null, created_at: ago(35), body: 'Antes de cada ensayo le pido a mis alumnos lo mismo: no toquen para impresionar, toquen para servir. La técnica es el camino; la adoración es el destino.\n\n¿Qué oran ustedes antes de tocar?', media: [{ url: 'public/img/enny-concierto.jpg', w: 1600, h: 1067 }] },
@@ -95,14 +99,27 @@ function seed() {
     s('himno-alegria-piano', 'Himno de la alegría · piano', 'Ludwig van Beethoven', 'Piano', 'Inicial', 'Do mayor', 92, 'col-himnos', false, ['piano', 'dos manos']),
   ];
   const notifications = [
-    { id: 'n0', user: null, kind: 'broadcast', title: 'Bienvenido a la academia', body: 'Esta semana subimos 5 obras nuevas a la biblioteca. Empieza por "Estrellita" si eres nuevo.', link: '#/biblioteca', actor: 'u-enny', created_at: ago(60 * 24 * 2) },
+    { id: 'n0', user: null, kind: 'broadcast', title: 'Bienvenido a Hosannia', body: 'Esta semana subimos 5 obras nuevas a la biblioteca. Empieza por "Estrellita" si eres nuevo.', link: '#/biblioteca', actor: 'u-enny', created_at: ago(60 * 24 * 2) },
     { id: 'n1', user: 'u-demo', kind: 'reaction', title: 'Daniela Cruz reaccionó "Amén" a tu comentario', body: '', link: '#/comunidad', actor: 'u-daniela', created_at: ago(60 * 3) },
     { id: 'n2', user: 'u-demo', kind: 'group', title: 'Nuevo mensaje en Oración & Cuerdas', body: 'Enny: Hoy oramos por calma y oído atento…', link: '#/comunidad/g-oracion', actor: 'u-enny', created_at: ago(90) },
   ];
   const subscriptions = [
     { user_id: 'u-demo', provider: 'demo', plan: 'anual', status: 'active', current_period_end: new Date(Date.now() + 300 * 86400000).toISOString() },
   ];
-  return { users, groups, members, posts, reactions, comments, saves: [], messages, collections, scores, favorites: [], notifications, reads: [], subscriptions, reports: [] };
+  // acompañar = seguir. Quien te acompaña ve tus historias.
+  const f = (a, b) => ({ follower: a, target: b, created_at: ago(60 * 24 * 5) });
+  const follows = [
+    f('u-demo', 'u-enny'), f('u-demo', 'u-daniela'), f('u-demo', 'u-sara'),
+    f('u-daniela', 'u-enny'), f('u-sara', 'u-enny'), f('u-mateo', 'u-enny'), f('u-elena', 'u-enny'), f('u-josue', 'u-enny'),
+    f('u-enny', 'u-demo'), f('u-enny', 'u-daniela'), f('u-daniela', 'u-sara'),
+  ];
+  const stories = [
+    { id: 'st1', author: 'u-enny', text: 'Ensayando para el domingo. Que todo lo que suene, sirva. 🎻', image: 'public/img/enny-estudio.jpg', created_at: ago(90) },
+    { id: 'st2', author: 'u-enny', text: 'Nueva obra en la biblioteca: Sublime gracia con digitaciones.', image: 'public/img/enny-partituras.jpg', created_at: ago(200) },
+    { id: 'st3', author: 'u-daniela', text: 'Primera vez tocando en el coro juvenil 🙌', image: 'public/img/enny-concierto.jpg', created_at: ago(320) },
+    { id: 'st4', author: 'u-sara', text: '15 minutos de escalas antes de empezar el día.', image: '', created_at: ago(500) },
+  ];
+  return { users, groups, members, posts, reactions, comments, saves: [], messages, collections, scores, favorites: [], notifications, reads: [], subscriptions, reports: [], follows, stories, story_views: [] };
 }
 
 /* ---------- persistencia ---------- */
@@ -115,8 +132,12 @@ function save(d) {
   catch (e) { throw new Error('El almacenamiento del navegador está lleno (modo demo). Borra datos de demo en Ajustes.'); }
 }
 
+const DAY = 86400000;
+
 export function createDemoStore() {
   let db = load();
+  // los datos viejos del navegador no traen historias ni acompañamientos
+  if (!db.follows) { db.follows = []; db.stories = []; db.story_views = []; }
   const listeners = { msg: new Map(), notif: new Set() };
   const commit = () => save(db);
   const meId = () => localStorage.getItem(SESSION);
@@ -173,7 +194,11 @@ export function createDemoStore() {
       const groups = db.members.filter((x) => x.user_id === id && x.status === 'active').length;
       const posts = db.posts.filter((p) => p.author === id && !p.group).length;
       return { ...pub(u), cover: u.cover, bio: hidden ? '' : u.bio, church: hidden ? '' : u.church, city: hidden ? '' : u.city,
-        social: hidden ? '' : u.social, privacy: u.privacy, created_at: u.created_at, hidden, stats: { posts, groups, amens: db.reactions.filter((r) => db.posts.find((p) => p.id === r.post_id)?.author === id).length }, isMe: id === me };
+        social: hidden ? '' : u.social, privacy: u.privacy, created_at: u.created_at, hidden,
+        iFollow: db.follows.some((f) => f.follower === me && f.target === id),
+        stats: { posts, groups, amens: db.reactions.filter((r) => db.posts.find((p) => p.id === r.post_id)?.author === id).length,
+          followers: db.follows.filter((f) => f.target === id).length, following: db.follows.filter((f) => f.follower === id).length },
+        isMe: id === me };
     },
     async updateMe(patch) {
       const u = user(need());
@@ -183,8 +208,66 @@ export function createDemoStore() {
     async uploadAvatar(img) { const u = user(need()); u.avatar = (await saveImage(img)).url; commit(); return u.avatar; },
     async uploadCover(img) { const u = user(need()); u.cover = (await saveImage(img)).url; commit(); return u.cover; },
     async searchPeople(q) {
-      q = (q || '').toLowerCase();
-      return db.users.filter((u) => !q || u.name.toLowerCase().includes(q) || (u.service || '').toLowerCase().includes(q)).slice(0, 20).map(pub);
+      const me = meId();
+      q = (q || '').toLowerCase().trim();
+      return db.users
+        .filter((u) => !q || `${u.name} ${u.service || ''} ${u.church || ''} ${u.city || ''}`.toLowerCase().includes(q))
+        .slice(0, 20)
+        .map((u) => ({ ...pub(u), church: u.privacy === 'private' ? '' : u.church, iFollow: db.follows.some((f) => f.follower === me && f.target === u.id), isMe: u.id === me }));
+    },
+
+    /* ---------- acompañar (seguir) ---------- */
+    async follow(userId) {
+      const me = need(); if (userId === me) throw new Error('No puedes acompañarte a ti misma.');
+      if (!user(userId)) throw new Error('Perfil no encontrado.');
+      const i = db.follows.findIndex((f) => f.follower === me && f.target === userId);
+      if (i >= 0) db.follows.splice(i, 1);
+      else {
+        db.follows.push({ follower: me, target: userId, created_at: now() });
+        notify({ user: userId, kind: 'follow', title: `${user(me).name} ahora te acompaña`, body: '', link: `#/perfil/${me}`, actor: me });
+      }
+      commit(); return i < 0;
+    },
+    async listFollow(userId, kind = 'following') {
+      const me = meId();
+      const ids = kind === 'followers'
+        ? db.follows.filter((f) => f.target === userId).map((f) => f.follower)
+        : db.follows.filter((f) => f.follower === userId).map((f) => f.target);
+      return ids.map((id) => ({ ...pub(user(id)), iFollow: db.follows.some((f) => f.follower === me && f.target === id), isMe: id === me })).filter((u) => u.id);
+    },
+
+    /* ---------- historias (24 h) ---------- */
+    async listStories() {
+      const me = need();
+      const alive = db.stories.filter((s) => Date.now() - new Date(s.created_at).getTime() < DAY);
+      const acompaño = new Set(db.follows.filter((f) => f.follower === me).map((f) => f.target));
+      const seen = new Set(db.story_views.filter((v) => v.user_id === me).map((v) => v.story_id));
+      const byAuthor = new Map();
+      alive.filter((s) => s.author === me || acompaño.has(s.author) || user(s.author)?.role === 'admin')
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        .forEach((s) => {
+          if (!byAuthor.has(s.author)) byAuthor.set(s.author, { author: pub(user(s.author)), mine: s.author === me, items: [] });
+          byAuthor.get(s.author).items.push({ id: s.id, text: s.text, image: s.image, created_at: s.created_at, seen: seen.has(s.id), mine: s.author === me,
+            views: s.author === me ? db.story_views.filter((v) => v.story_id === s.id).length : 0 });
+        });
+      const list = [...byAuthor.values()];
+      list.forEach((g) => { g.allSeen = g.items.every((i) => i.seen); });
+      return list.sort((a, b) => (a.mine ? -1 : b.mine ? 1 : a.allSeen - b.allSeen));
+    },
+    async createStory({ image = null, text = '' }) {
+      const me = need(); text = String(text || '').trim().slice(0, 200);
+      if (!image && !text) throw new Error('Escribe algo o elige una foto.');
+      const s = { id: uid(), author: me, text, image: image ? (await saveImage(image)).url : '', created_at: now() };
+      db.stories.push(s); commit(); return s;
+    },
+    async seeStory(id) {
+      const me = need();
+      if (!db.story_views.some((v) => v.story_id === id && v.user_id === me)) { db.story_views.push({ story_id: id, user_id: me }); commit(); }
+    },
+    async deleteStory(id) {
+      const me = need(); const s = db.stories.find((x) => x.id === id); if (!s) return;
+      if (s.author !== me && !isAdmin()) throw new Error('No puedes borrar esta historia.');
+      db.stories = db.stories.filter((x) => x.id !== id); db.story_views = db.story_views.filter((v) => v.story_id !== id); commit();
     },
 
     /* ---------- publicaciones ---------- */
@@ -267,16 +350,50 @@ export function createDemoStore() {
     },
     _group(g, me) {
       const mm = memberOf(g.id, me);
+      const canManage = (mm && ['owner', 'admin'].includes(mm.role) && mm.status === 'active') || isAdmin();
+      const show = { contact: true, address: true, schedule: true, members: true, ...(g.show || {}) };
+      const inside = canManage || (mm && mm.status === 'active');
+      // los datos de contacto solo salen del grupo si sus administradores lo permiten
+      const info = { ...{ kind: 'grupo', phone: '', email: '', address: '', schedule: '', site: '' }, ...(g.info || {}) };
+      const visible = {
+        kind: info.kind,
+        phone: show.contact || inside ? info.phone : '', email: show.contact || inside ? info.email : '',
+        site: show.contact || inside ? info.site : '',
+        address: show.address || inside ? info.address : '', schedule: show.schedule || inside ? info.schedule : '',
+      };
       return { id: g.id, name: g.name, description: g.description, privacy: g.privacy, cover: g.cover, rules: g.rules, created_at: g.created_at,
         owner: pub(user(g.owner)), members: db.members.filter((x) => x.group_id === g.id && x.status === 'active').length,
         pending: db.members.filter((x) => x.group_id === g.id && x.status === 'pending').length,
-        myStatus: mm ? mm.status : null, myRole: mm ? mm.role : null, canManage: (mm && ['owner', 'admin'].includes(mm.role) && mm.status === 'active') || isAdmin() };
+        info: visible, show, showMembers: show.members || inside,
+        myStatus: mm ? mm.status : null, myRole: mm ? mm.role : null, canManage };
+    },
+    async updateGroup(id, patch) {
+      const me = need(); const g = db.groups.find((x) => x.id === id); if (!g) throw new Error('Comunidad no encontrada.');
+      if (!this._group(g, me).canManage) throw new Error('Solo quien administra la comunidad puede cambiar esto.');
+      if ('name' in patch) { const n = String(patch.name).trim().slice(0, 60); if (n.length < 3) throw new Error('El nombre necesita al menos 3 letras.'); g.name = n; }
+      if ('description' in patch) g.description = String(patch.description).slice(0, 400);
+      if ('rules' in patch) g.rules = String(patch.rules).slice(0, 800);
+      if ('privacy' in patch) g.privacy = patch.privacy === 'private' ? 'private' : 'public';
+      if (patch.cover) g.cover = (await saveImage(patch.cover)).url;
+      if (patch.info) g.info = { ...(g.info || {}), ...Object.fromEntries(Object.entries(patch.info).map(([k, v]) => [k, String(v ?? '').slice(0, 160)])) };
+      if (patch.show) g.show = { ...(g.show || {}), ...patch.show };
+      commit(); return this._group(g, me);
+    },
+    async deleteGroup(id) {
+      const me = need(); const g = db.groups.find((x) => x.id === id); if (!g) return;
+      if (g.owner !== me && !isAdmin()) throw new Error('Solo quien creó la comunidad puede eliminarla.');
+      db.groups = db.groups.filter((x) => x.id !== id);
+      db.members = db.members.filter((x) => x.group_id !== id);
+      db.messages = db.messages.filter((x) => x.group_id !== id);
+      db.posts = db.posts.filter((x) => x.group !== id);
+      commit();
     },
     async getGroup(id) { const me = need(); const g = db.groups.find((x) => x.id === id); if (!g) throw new Error('Comunidad no encontrada.'); return this._group(g, me); },
-    async createGroup({ name, description, privacy = 'public', cover = null, rules = '' }) {
+    async createGroup({ name, description, privacy = 'public', cover = null, rules = '', kind = 'grupo' }) {
       const me = need(); name = String(name || '').trim().slice(0, 60); description = String(description || '').trim().slice(0, 400);
       if (name.length < 3) throw new Error('El nombre necesita al menos 3 letras.');
-      const g = { id: uid(), name, description, privacy: privacy === 'private' ? 'private' : 'public', cover: cover ? (await saveImage(cover)).url : '', owner: me, created_at: now(), rules: String(rules || '').slice(0, 800) };
+      const g = { id: uid(), name, description, privacy: privacy === 'private' ? 'private' : 'public', cover: cover ? (await saveImage(cover)).url : '', owner: me, created_at: now(), rules: String(rules || '').slice(0, 800),
+        info: { kind: kind === 'iglesia' ? 'iglesia' : 'grupo', phone: '', email: '', address: '', schedule: '', site: '' }, show: { contact: true, address: true, schedule: true, members: true } };
       db.groups.unshift(g); db.members.push({ group_id: g.id, user_id: me, role: 'owner', status: 'active', joined_at: now() });
       db.messages.push({ id: uid(), group_id: g.id, author: me, body: 'Bienvenidos. Este es un espacio para crecer y servir juntos.', created_at: now() });
       commit(); return this._group(g, me);

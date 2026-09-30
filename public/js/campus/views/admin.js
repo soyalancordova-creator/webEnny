@@ -1,5 +1,5 @@
 /* ============================================================
-   ADMINISTRACIÓN DE LA ACADEMIA
+   ADMINISTRACIÓN DE HOSANNIA
    Partituras · Sincronización · Colecciones · Avisos · Moderación · Alumnos
    La interfaz se oculta a quien no es admin, pero lo que protege es RLS:
    cada escritura aquí la rechaza la base si el rol no es admin.
@@ -11,9 +11,9 @@ import { ScoreEngine, youtubeId } from '../score-engine.js';
 const TABS = [['', 'Resumen', 'feed'], ['partituras', 'Partituras', 'music'], ['colecciones', 'Colecciones', 'book'], ['avisos', 'Avisos', 'megaphone'], ['moderacion', 'Moderación', 'flag'], ['alumnos', 'Alumnos', 'users']];
 
 export async function renderAdmin(ctx, view, [tab = '', sub]) {
-  ctx.setTitle('Panel de la academia');
+  ctx.setTitle('Panel de Hosannia');
   view.innerHTML = `<div style="max-width:1180px;margin:0 auto">
-    <div class="cx-h"><div><span class="eyebrow">Administración</span><h1>Panel de la academia</h1><p>Contenido de la biblioteca, avisos y comunidad. ${ctx.store.mode === 'demo' ? '<b>Modo demo:</b> los cambios quedan en este navegador.' : ''}</p></div>
+    <div class="cx-h"><div><span class="eyebrow">Administración</span><h1>Panel de Hosannia</h1><p>Contenido de la biblioteca, avisos y comunidad. ${ctx.store.mode === 'demo' ? '<b>Modo demo:</b> los cambios quedan en este navegador.' : ''}</p></div>
       <a class="btn btn-ghost btn-sm" href="admin.html"><span>${icon('settings')} Contenido del sitio web</span></a></div>
     <nav class="gp-tabs">${TABS.map(([k, l, ic]) => `<button class="${k === tab ? 'on' : ''}" data-t="${k}">${icon(ic)}${l}</button>`).join('')}</nav>
     <div id="ab"></div></div>`;
@@ -231,7 +231,7 @@ async function broadcastTab(ctx, el) {
       <p class="muted" style="font-size:.86rem">Llega a la campana de cada alumno. Úsalo para obras nuevas, clases en vivo o recordatorios.</p>
       <div class="fld"><label>Título</label><input id="bT" maxlength="120" placeholder="Ej. Nueva obra: Sublime gracia"></div>
       <div class="fld"><label>Mensaje</label><textarea id="bB" maxlength="600"></textarea></div>
-      <div class="fld"><label>Enlace dentro de la plataforma (opcional)</label><select id="bL"><option value="">Sin enlace</option><option value="#/biblioteca">Biblioteca</option><option value="#/comunidad">Comunidad</option><option value="#/comunidades">Comunidades</option><option value="#/planes">Planes</option></select></div>
+      <div class="fld"><label>Enlace dentro de la plataforma (opcional)</label><select id="bL"><option value="">Sin enlace</option><option value="#/biblioteca">Biblioteca</option><option value="#/comunidad">Comunidad</option><option value="#/comunidades">Comunidades</option><option value="#/ajustes/suscripcion">Planes</option></select></div>
       <div class="cx-row" style="justify-content:flex-end"><button class="btn btn-fill btn-sm" id="bS"><span>${icon('send')} Enviar a todos</span></button></div></section>
     <section class="cx-card cx-pad"><h3 style="font-size:1.1rem;margin-bottom:.6rem">Enviados</h3><div class="nt" id="bH"></div></section></div>`;
   const hist = async () => { const l = await ctx.store.adminBroadcasts(); $('#bH', el).innerHTML = l.length ? l.map((n) => `<div class="nt-item adm"><span class="ico">${icon('megaphone')}</span><div><b>${esc(n.title)}</b>${n.body ? `<p>${esc(n.body)}</p>` : ''}<time>${ago(n.created_at)}</time></div></div>`).join('') : '<p class="muted">Aún no envías avisos.</p>'; };

@@ -30,7 +30,7 @@ export function scoreCard(s) {
 export function wireCards(root, list, ctx, reload) {
   $$('.sc', root).forEach((el) => {
     const s = list.find((x) => x.id === el.dataset.id);
-    const open = () => { if (s.locked) { toast('Esta obra es parte de la suscripción.'); ctx.go('#/planes'); } else ctx.go(`#/obra/${s.id}`); };
+    const open = () => { if (s.locked) { toast('Esta obra es parte de la suscripción.'); ctx.go('#/ajustes/suscripcion'); } else ctx.go(`#/obra/${s.id}`); };
     el.onclick = (e) => { if (e.target.closest('[data-fav]')) return; open(); };
     el.onkeydown = (e) => { if (e.key === 'Enter') open(); };
     $('[data-fav]', el).onclick = async (e) => {
@@ -40,20 +40,24 @@ export function wireCards(root, list, ctx, reload) {
   });
 }
 
+/** #/favoritos — la biblioteca abierta en "Mis partituras". */
+export function renderFavorites(ctx, view) { return renderLibrary(ctx, view, ['fav=1']); }
+
 export async function renderLibrary(ctx, view, [query]) {
-  ctx.setTitle('Biblioteca');
   const qs = new URLSearchParams(query || '');
-  const st = { q: qs.get('q') || '', instrument: '', level: '', collection: qs.get('col') || '', favorites: false };
+  const onlyFav = qs.get('fav') === '1';
+  ctx.setTitle(onlyFav ? 'Mis partituras' : 'Biblioteca');
+  const st = { q: qs.get('q') || '', instrument: '', level: '', collection: qs.get('col') || '', favorites: onlyFav };
   view.innerHTML = `<div style="max-width:1240px;margin:0 auto">
-    <div class="cx-h"><div><span class="eyebrow">Biblioteca</span><h1>Partituras para practicar</h1>
-      <p>Ábrelas, escúchalas a tu velocidad, repite los compases difíciles y sigue el cursor nota a nota.</p></div>
-      ${ctx.me.hasAccess ? '' : `<a class="btn btn-fill btn-sm" href="#/planes"><span>${icon('crown')} Desbloquear todo</span></a>`}</div>
-    <div class="col-strip" id="cols"></div>
+    <div class="cx-h"><div><span class="eyebrow">${onlyFav ? 'Tu selección' : 'Biblioteca'}</span><h1>${onlyFav ? 'Mis partituras' : 'Partituras que suenan'}</h1>
+      <p>${onlyFav ? 'Las obras que marcaste con el corazón, listas para el atril.' : 'Ábrelas, escúchalas a tu velocidad, repite los compases difíciles y sigue el cursor nota a nota.'}</p></div>
+      ${ctx.me.hasAccess ? '' : `<a class="btn btn-fill btn-sm" href="#/ajustes/suscripcion"><span>${icon('crown')} Desbloquear todo</span></a>`}</div>
+    ${onlyFav ? '' : '<div class="col-strip" id="cols"></div>'}
     <div class="lib-top">
       <div class="cx-search" style="max-width:340px">${icon('search')}<input id="lq" placeholder="Título, autor o etiqueta" value="${esc(st.q)}"></div>
       <div class="cx-row" id="fInst"><button class="cx-chip on" data-v="">Todos</button><button class="cx-chip" data-v="Violín">Violín</button><button class="cx-chip" data-v="Piano">Piano</button><button class="cx-chip" data-v="Violonchelo">Chelo</button></div>
       <div class="cx-row" id="fLvl"><button class="cx-chip on" data-v="">Todo nivel</button><button class="cx-chip" data-v="Inicial">Inicial</button><button class="cx-chip" data-v="Intermedio">Intermedio</button><button class="cx-chip" data-v="Avanzado">Avanzado</button></div>
-      <button class="cx-chip" id="fFav">${icon('heart')}Favoritos</button>
+      <button class="cx-chip${onlyFav ? ' on' : ''}" id="fFav">${icon('heart')}Favoritos</button>
     </div>
     <div class="lib-grid" id="grid"></div></div>`;
   const grid = $('#grid', view);
@@ -71,7 +75,7 @@ export async function renderLibrary(ctx, view, [query]) {
   $('#fFav', view).onclick = (e) => { st.favorites = !st.favorites; e.currentTarget.classList.toggle('on', st.favorites); load(); };
   let t = 0; $('#lq', view).oninput = (e) => { clearTimeout(t); t = setTimeout(() => { st.q = e.target.value.trim(); load(); }, 250); };
 
-  ctx.store.listCollections().then((cols) => {
+  if (!onlyFav) ctx.store.listCollections().then((cols) => {
     $('#cols', view).innerHTML = `<a href="#/biblioteca" style="background:linear-gradient(135deg,var(--gold),var(--wine))" data-c=""><b>Todas las obras</b><small>Catálogo completo</small></a>` +
       cols.map((c) => `<a href="#/biblioteca?col=${esc(c.id)}" data-c="${esc(c.id)}"${st.collection === c.id ? ' style="outline:2px solid var(--gold);outline-offset:2px"' : ''}><b>${esc(c.title)}</b><small>${c.count} obra${c.count === 1 ? '' : 's'} · ${esc(c.description)}</small></a>`).join('');
   }).catch(() => {});

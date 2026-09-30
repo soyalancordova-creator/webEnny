@@ -3,13 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Academia Enny Toro</title>
+<title>Hosannia</title>
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#1b0f12">
+<meta name="theme-color" content="#0D1321">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="public/img/hosannia-icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="public/img/hosannia-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hosannia">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="public/css/brand.css">
+<link rel="stylesheet" href="public/css/hosannia.css">
 <link rel="stylesheet" href="public/css/campus.css">
 <link rel="modulepreload" href="public/js/campus/main.js">
 </head>
@@ -19,10 +26,11 @@
   <main class="cx-main">
     <header class="cx-top">
       <button class="cx-iconbtn cx-hamb" id="hamb" aria-label="Menú"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-      <form class="cx-search" id="searchForm" role="search">
+      <form class="cx-search" id="searchForm" role="search" autocomplete="off">
         <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
-        <input id="searchInput" placeholder="Busca obras, comunidades o personas" aria-label="Buscar">
+        <input id="searchInput" placeholder="Busca partituras, comunidades o personas" aria-label="Buscar" autocomplete="off">
         <kbd>Ctrl K</kbd>
+        <div class="cx-sugg" id="searchSugg" hidden></div>
       </form>
       <span class="sp"></span>
       <button class="cx-iconbtn" id="themeBtn" aria-label="Cambiar tema"></button>
@@ -32,11 +40,12 @@
   </main>
 </div>
 <nav class="cx-tabs" id="tabs" aria-label="Navegación inferior"></nav>
-<noscript><p style="padding:2rem;text-align:center">La plataforma necesita JavaScript activado.</p></noscript>
+<noscript><p style="padding:2rem;text-align:center">Hosannia necesita JavaScript activado.</p></noscript>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="public/js/config.js"></script>
 <script src="public/js/app.js"></script>
 <script type="module" src="public/js/campus/main.js"></script>
+<script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </body>
 </html>

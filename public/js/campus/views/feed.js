@@ -251,6 +251,7 @@ export async function renderFeed(ctx, view) {
     <div class="fd-col">
       <div class="cx-h" style="margin-bottom:.2rem"><div><span class="eyebrow">Comunidad</span><h1>Un lugar para crear y servir</h1>
         <p>Comparte una reflexión, una pregunta o un pedido de oración con músicos que aman a Jesús.</p></div></div>
+      <div id="stories"></div>
       <div id="cmpHost"></div>
       <div class="cx-row" id="filters">
         <button class="cx-chip on" data-t="">Todo</button>
@@ -266,6 +267,7 @@ export async function renderFeed(ctx, view) {
   </div>`;
   const list = $('#list', view);
   let type = '';
+  import('./stories.js').then((m) => m.mountStoryRail(ctx, $('#stories', view))).catch(() => {});
   $('#cmpHost', view).appendChild(composer(ctx, { onPosted: (p) => { if (!type || p.type === type) prependPost(list, p, ctx); } }));
   $$('#filters [data-t]', view).forEach((b) => { b.onclick = () => { type = b.dataset.t; $$('#filters .cx-chip', view).forEach((x) => x.classList.toggle('on', x === b)); mountList(list, ctx, { type: type || null }); }; });
   mountList(list, ctx, {});

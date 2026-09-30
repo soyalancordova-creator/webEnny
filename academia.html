@@ -3,13 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Academia — Enny Toro</title>
-<meta name="description" content="Entra al campus de la Academia Enny Toro: clases, partituras, recursos y comunidad.">
-<meta name="theme-color" content="#F7F4EF">
+<title>Hosannia · entrar</title>
+<meta name="description" content="Hosannia: partituras que suenan y una comunidad de músicos cristianos. Entra o crea tu cuenta.">
+<meta name="theme-color" content="#0D1321">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="public/img/hosannia-icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="public/img/hosannia-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hosannia">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="public/css/brand.css">
+<link rel="stylesheet" href="public/css/hosannia.css">
 <style>
 body{min-height:100svh}
 .auth{display:grid;grid-template-columns:1.02fr .98fr;min-height:100svh}
@@ -50,8 +57,18 @@ body{min-height:100svh}
   border:1px solid var(--glass-brd);border-radius:26px;box-shadow:var(--shadow);
   padding:clamp(1.6rem,3vw,2.3rem)}
 .brand-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.6rem}
-.brand-row .logo{font-family:var(--serif);font-size:1.15rem}
-.brand-row .logo i{font-style:normal;color:var(--gold)}
+.inst-box{margin-top:1.2rem;display:flex;align-items:center;gap:.85rem;flex-wrap:wrap;padding:.9rem 1rem;border-radius:18px;
+  border:1px solid var(--hair);background:var(--glass-2)}
+.inst-box .ib-ic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(150deg,#16203A,#0D1321);color:#fff}
+.inst-box .ib-ic svg{width:20px;height:20px}
+.inst-box b{display:block;font-size:.9rem}
+.inst-box small{display:block;color:var(--ink-3);font-size:.78rem;line-height:1.45;margin-top:.1rem}
+.brand-row .logo{display:block;line-height:0}
+.hs-full{height:26px;width:auto;display:block}
+.hs-full.dark{display:none}
+html[data-theme="dark"] .hs-full{display:none}
+html[data-theme="dark"] .hs-full.dark{display:block}
 .card-auth h2{font-size:1.75rem;margin-bottom:.4rem}
 .card-auth .sub{color:var(--ink-2);font-size:.92rem;margin-bottom:1.6rem}
 
@@ -96,16 +113,17 @@ form.on{display:grid}
   <!-- ================= LADO IZQUIERDO ================= -->
   <aside class="side">
     <div class="bg"><img id="sideImg" src="public/img/enny-editorial-negro.jpg" alt="Enny Toro con su violín"></div>
-    <a href="index.html" class="volver">← Volver al inicio</a>
+    <a href="index.html" class="volver">← Sitio de Enny Toro</a>
     <div>
-      <span class="eyebrow">La Academia</span>
-      <h1>Aprende el arte del <em>violín</em></h1>
-      <p class="lead">Partituras que suenan, se repiten y se ralentizan a tu ritmo, y una comunidad de músicos que sirven con su talento.</p>
+      <span class="eyebrow">Conectando corazones · alabando juntos</span>
+      <h1>Partituras que <em>suenan</em></h1>
+      <p class="lead">La herramienta para quienes sirven con la música: abre una partitura, escúchala, repite el compás difícil, y crece junto a una comunidad que cree lo mismo que tú.</p>
       <div class="feats">
         <div class="feat"><i>✓</i><span>Partituras interactivas: cursor, loop, velocidad y metrónomo</span></div>
         <div class="feat"><i>✓</i><span>Grabaciones de Enny sincronizadas compás a compás</span></div>
         <div class="feat"><i>✓</i><span>Comunidades, chat y peticiones de oración</span></div>
         <div class="feat"><i>✓</i><span>Comunidad gratis · biblioteca desde $5 al mes</span></div>
+        <div class="feat"><i>✓</i><span>Se instala en tu celular como aplicación</span></div>
       </div>
     </div>
     <p class="quote">«Cada nota puede acercar a las personas a algo más grande que ellas mismas.»</p>
@@ -115,7 +133,7 @@ form.on{display:grid}
   <main class="main">
     <div class="card-auth">
       <div class="brand-row">
-        <a href="index.html" class="logo"><b>Enny</b> <i>Toro</i></a>
+        <a href="#" class="logo" aria-label="Hosannia"><img src="public/img/hosannia-logo.png" alt="Hosannia" class="hs-full"><img src="public/img/hosannia-logo-white.png" alt="Hosannia" class="hs-full dark"></a>
         <button class="icb" id="theme" aria-label="Cambiar tema">
           <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
           <svg class="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -123,7 +141,7 @@ form.on{display:grid}
       </div>
 
       <h2 id="tTitle">Bienvenida de vuelta</h2>
-      <p class="sub" id="tSub">Inicia sesión para entrar a tu campus.</p>
+      <p class="sub" id="tSub">Entra a tus partituras y a la comunidad.</p>
 
       <div class="tabs" id="tabs">
         <button class="on" data-t="login" type="button">Iniciar sesión</button>
@@ -145,7 +163,7 @@ form.on{display:grid}
           <label class="chk"><input type="checkbox" id="lRem" checked> Recuérdame</label>
           <a id="lForgot">¿Olvidaste tu contraseña?</a>
         </div>
-        <button class="btn btn-fill" type="submit" id="lBtn"><span>Entrar a la Academia</span></button>
+        <button class="btn btn-fill" type="submit" id="lBtn"><span>Entrar a Hosannia</span></button>
         <div class="msg" id="lMsg"></div>
       </form>
 
@@ -207,7 +225,12 @@ form.on{display:grid}
         </div>
         <p style="font-size:.72rem;color:var(--ink-3);margin-top:.7rem;line-height:1.5">También puedes escribir: <b>alumno@demo.academia</b> / <b>demo1234</b> o <b>enny@demo.academia</b> / <b>admin1234</b></p>
       </div>
-      <p class="legal">Al continuar aceptas las condiciones de la Academia Enny Toro.</p>
+      <div id="instBox" class="inst-box" hidden>
+        <div class="ib-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="3"/><path d="M10.5 18.5h3"/></svg></div>
+        <div style="flex:1;min-width:150px"><b>Úsala como aplicación</b><small id="instTxt">Instálala en tu celular y ábrela a pantalla completa.</small></div>
+        <button class="btn btn-fill btn-sm" type="button" id="instBtn"><span>Instalar</span></button>
+      </div>
+      <p class="legal">Al continuar aceptas los <a href="terminos.html">términos</a> y la <a href="privacidad.html">privacidad</a> de Hosannia.</p>
     </div>
   </main>
 </div>
@@ -228,7 +251,7 @@ var next = new URLSearchParams(location.search).get('next') || '';
 /* Todos entran a la plataforma; quien acaba de crear su cuenta ve primero los planes. */
 function irAdentro(perfil, nuevo) {
   if (next && /^[a-z0-9_-]+\.html$/i.test(next)) { location.href = next; return; }
-  location.href = nuevo ? 'campus.html#/planes' : 'campus.html';
+  location.href = nuevo ? 'campus.html#/ajustes/suscripcion' : 'campus.html';
 }
 if (A.listo) {
   A.perfil().then(function (p) { if (p) irAdentro(p); });
@@ -251,7 +274,7 @@ function ver(cual) {
   if (cual === 'login') {
     fLogin.classList.add('on');
     tTitle.textContent = 'Bienvenida de vuelta';
-    tSub.textContent = 'Inicia sesión para entrar a tu campus.';
+    tSub.textContent = 'Entra a tus partituras y a la comunidad.';
   } else if (cual === 'registro') {
     fReg.classList.add('on');
     tTitle.textContent = 'Crea tu cuenta';
@@ -342,7 +365,7 @@ document.getElementById('fReg').addEventListener('submit', function (ev) {
   cargando(btn, true);
   A.sb.auth.signUp({
     email: correo, password: p1,
-    options: { data: { full_name: nombre, age: edad }, emailRedirectTo: location.origin + '/campus.html#/planes' }
+    options: { data: { full_name: nombre, age: edad }, emailRedirectTo: location.origin + '/campus.html#/ajustes/suscripcion' }
   }).then(function (r) {
     cargando(btn, false, 'Crear mi cuenta');
     if (r.error) return A.aviso(msg, traducir(r.error), 'err');
@@ -400,7 +423,7 @@ document.getElementById('fLogin').addEventListener('submit', function (ev) {
   cargando(btn, true);
   A.sb.auth.signInWithPassword({ email: correo, password: pass }).then(function (r) {
     if (r.error) {
-      cargando(btn, false, 'Entrar a la Academia');
+      cargando(btn, false, 'Entrar a Hosannia');
       if ((r.error.message || '').indexOf('Email not confirmed') > -1) {
         correoPendiente = correo;
         document.getElementById('cMail').textContent = correo;
@@ -413,7 +436,7 @@ document.getElementById('fLogin').addEventListener('submit', function (ev) {
     }
     A.perfil().then(irAdentro);
   }).catch(function (e) {
-    cargando(btn, false, 'Entrar a la Academia');
+    cargando(btn, false, 'Entrar a Hosannia');
     A.aviso(msg, traducir(e), 'err');
   });
 });
@@ -453,6 +476,23 @@ if (cfg.DEMO_MODE === true || !(A && A.listo)) {
     msg('rMsg', 'En modo demostración no se crean cuentas nuevas. Usa una de las cuentas de prueba de abajo.');
   }, true);
 }
+</script>
+
+<!-- Instalar como app + service worker -->
+<script type="module">
+import { installer } from './public/js/campus/pwa.js';
+installer.watch();
+const box = document.getElementById('instBox'), btn = document.getElementById('instBtn'), txt = document.getElementById('instTxt');
+function paint() {
+  if (installer.standalone) { box.hidden = true; return; }
+  box.hidden = false;
+  if (!installer.canPrompt) { btn.hidden = true; txt.textContent = installer.help(); }
+  else { btn.hidden = false; txt.textContent = 'Instálala en tu celular y ábrela a pantalla completa.'; }
+}
+installer.onChange(paint);
+btn.onclick = async () => { const r = await installer.prompt(); if (r !== 'installed') txt.textContent = installer.help(); paint(); };
+paint();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
