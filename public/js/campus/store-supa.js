@@ -24,7 +24,7 @@ export function createSupaStore(sb, cfg = {}) {
   const q = async (p, msg) => { const r = await p; fail(r.error, msg); return r.data; };
   const uid = async () => { const { data } = await sb.auth.getSession(); if (!data.session) throw new Error('Tu sesión terminó. Vuelve a entrar.'); return data.session.user.id; };
 
-  const pub = (p) => p && { id: p.id, name: p.full_name || 'Alumno', avatar: p.avatar_url || '', service: p.service || '', role: p.role };
+  const pub = (p) => p && { id: p.id, name: p.full_name || 'Alumno', avatar: p.avatar_url || '', service: p.service || '', role: p.role, gender: p.gender || '' };
   async function people(ids) {
     const need = [...new Set(ids.filter((i) => i && !pcache.has(i)))];
     if (need.length) {
@@ -89,11 +89,12 @@ export function createSupaStore(sb, cfg = {}) {
       ]);
       return { ...pub(p), cover: p.cover_url || '', bio: p.bio || '', church: p.church || '', city: p.city || '', social: p.social || '',
         privacy: p.privacy, created_at: p.created_at, hidden, isMe: id === me, iFollow: !!(mine && mine.data),
+        gender: p.gender || '', instagram: p.instagram || '', facebook: p.facebook || '', tiktok: p.tiktok || '',
         stats: { posts: posts.count || 0, groups: groups.count || 0, amens: 0, followers: followers.count || 0, following: following.count || 0 } };
     },
     async updateMe(patch) {
       const me = await uid(); const row = {};
-      const map = { name: 'full_name', service: 'service', church: 'church', city: 'city', bio: 'bio', social: 'social', privacy: 'privacy' };
+      const map = { name: 'full_name', service: 'service', church: 'church', city: 'city', bio: 'bio', social: 'social', privacy: 'privacy', gender: 'gender', instagram: 'instagram', facebook: 'facebook', tiktok: 'tiktok' };
       Object.keys(map).forEach((k) => { if (k in patch) row[map[k]] = String(patch[k] ?? '').slice(0, k === 'bio' ? 400 : 120); });
       row.updated_at = new Date().toISOString();
       await q(sb.from('profiles').update(row).eq('id', me));
@@ -123,13 +124,13 @@ export function createSupaStore(sb, cfg = {}) {
       return rows.map((p) => ({ ...pub(p), church: p.church || '', iFollow: set.has(p.id), isMe: p.id === me }));
     },
 
-    /* ---------- acompañar (seguir) ---------- */
+    /* ---------- conectar (hermanos en Cristo) ---------- */
     async follow(userId) {
       const me = await uid();
-      if (userId === me) throw new Error('No puedes acompañarte a ti misma.');
+      if (userId === me) throw new Error('No puedes conectarte contigo misma.');
       const cur = await q(sb.from('follows').select('target_id').eq('follower_id', me).eq('target_id', userId).maybeSingle());
       if (cur) { await q(sb.from('follows').delete().eq('follower_id', me).eq('target_id', userId)); return false; }
-      await q(sb.from('follows').insert({ follower_id: me, target_id: userId }), 'No se pudo acompañar a esta persona.');
+      await q(sb.from('follows').insert({ follower_id: me, target_id: userId }), 'No se pudo conectar con esta persona.');
       return true;
     },
     async listFollow(userId, kind = 'following') {

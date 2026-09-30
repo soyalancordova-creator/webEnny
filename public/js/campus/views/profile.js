@@ -2,7 +2,7 @@
    PERFILES · ver (propio y ajeno) y editar
 ============================================================ */
 import { icon } from '../icons.js';
-import { $, esc, richText, avatar, toast, empty } from '../ui.js';
+import { $, esc, richText, avatar, toast, empty, conectarTxt, redSocial } from '../ui.js';
 import { compressImage } from '../media.js';
 import { mountList } from './feed.js';
 
@@ -12,6 +12,8 @@ export async function renderProfile(ctx, view, [id]) {
   try { p = await ctx.store.getProfile(id); } catch (e) { empty(view, 'user', e.message); return; }
   ctx.setTitle(p.name);
   const since = new Date(p.created_at).toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
+  const redes = [['instagram', 'link'], ['facebook', 'link'], ['tiktok', 'link']]
+    .map(([k]) => redSocial(k, p[k])).filter(Boolean);
   const social = p.social ? (/^https?:\/\//.test(p.social) ? p.social : `https://${p.social}`) : '';
   view.innerHTML = `<div style="max-width:1080px;margin:0 auto">
     <div class="pf-cover">${p.cover ? `<img src="${esc(p.cover)}" alt="">` : ''}</div>
@@ -19,11 +21,11 @@ export async function renderProfile(ctx, view, [id]) {
       <span class="pf-av">${avatar(p, 'xl')}</span>
       <div class="who"><h1>${esc(p.name)}</h1>
         <div class="role">${esc(p.service || (p.role === 'admin' ? 'Docente' : 'Integrante'))}</div>
-        <div class="pf-counts"><b>${p.stats.followers}</b> <span>${p.stats.followers === 1 ? 'te acompaña' : 'lo acompañan'}</span> · <b>${p.stats.following}</b> <span>acompaña</span></div>
+        <div class="pf-counts"><b>${p.stats.followers}</b> <span>${p.stats.followers === 1 ? 'hermano conectado' : 'hermanos conectados'}</span> · <b>${p.stats.following}</b> <span>${p.stats.following === 1 ? 'conexión' : 'conexiones'}</span></div>
       </div>
       <div class="pf-acts">
         ${p.isMe ? `<a class="btn btn-ghost btn-sm" href="#/editar-perfil"><span>${icon('edit')} Editar perfil</span></a>`
-          : `<button class="btn ${p.iFollow ? 'btn-ghost' : 'btn-fill'} btn-sm" id="fw"><span>${p.iFollow ? icon('check') + ' Acompañando' : icon('hands') + ' Acompañar'}</span></button>`}
+          : `<button class="btn ${p.iFollow ? 'btn-ghost' : 'btn-fill'} btn-sm" id="fw"><span>${p.iFollow ? icon('check') + ' Hermanos en Cristo' : icon('hands') + ' ' + conectarTxt(p)}</span></button>`}
       </div>
     </div>
     <div class="pf-grid">
@@ -34,12 +36,13 @@ export async function renderProfile(ctx, view, [id]) {
           <div class="pf-facts">
             ${p.church ? `<div>${icon('church')}${esc(p.church)}</div>` : ''}
             ${p.city ? `<div>${icon('map')}${esc(p.city)}</div>` : ''}
-            ${social ? `<div>${icon('link')}<a href="${esc(social)}" target="_blank" rel="noopener nofollow" style="color:var(--wine)">${esc(p.social)}</a></div>` : ''}
+            ${redes.map((r) => `<div>${icon('link')}<a href="${esc(r.url)}" target="_blank" rel="noopener nofollow" style="color:var(--wine)">${esc(r.user)}</a><small style="color:var(--ink-3);margin-left:.3rem">${esc(r.label)}</small></div>`).join('')}
+            ${social && !redes.length ? `<div>${icon('link')}<a href="${esc(social)}" target="_blank" rel="noopener nofollow" style="color:var(--wine)">${esc(p.social)}</a></div>` : ''}
             <div>${icon('calendar')}En Hosannia desde ${esc(since)}</div>
           </div>`}
           <div class="pf-stats"><div><b>${p.stats.posts}</b><small>Publicaciones</small></div><div><b>${p.stats.groups}</b><small>Comunidades</small></div><div><b>${p.stats.amens}</b><small>Reacciones</small></div></div>
         </section>
-        <section class="cx-card cx-pad"><h3 style="font-size:1.05rem;margin-bottom:.6rem">A quién acompaña</h3><div class="mini-list" id="pFollow"></div></section>
+        <section class="cx-card cx-pad"><h3 style="font-size:1.05rem;margin-bottom:.6rem">Hermanos en Cristo</h3><div class="mini-list" id="pFollow"></div></section>
       </aside>
       <div class="fd-col" id="pList"></div>
     </div></div>`;
@@ -49,7 +52,7 @@ export async function renderProfile(ctx, view, [id]) {
     fw.disabled = true;
     try {
       const on = await ctx.store.follow(p.id);
-      toast(on ? `Ahora acompañas a ${p.name.split(' ')[0]}.` : 'Dejaste de acompañar.');
+      toast(on ? `Ya están conectados con ${p.name.split(' ')[0]}. 🤝` : 'Se deshizo la conexión.');
       renderProfile(ctx, view, [id]);
     } catch (e) { toast(e.message); fw.disabled = false; }
   };
@@ -58,7 +61,7 @@ export async function renderProfile(ctx, view, [id]) {
     const box = $('#pFollow', view); if (!box) return;
     box.innerHTML = list.length
       ? list.slice(0, 6).map((u) => `<a href="#/perfil/${esc(u.id)}">${avatar(u, 'sm')}<div style="min-width:0"><b>${esc(u.name)}</b><small>${esc(u.service || '')}</small></div></a>`).join('')
-      : '<p class="muted" style="font-size:.86rem">Todavía no acompaña a nadie.</p>';
+      : '<p class="muted" style="font-size:.86rem">Todavía no tiene conexiones.</p>';
   }).catch(() => {});
 
   if (p.hidden) { empty($('#pList', view), 'lock', 'Las publicaciones de este perfil son privadas.'); return; }
@@ -78,9 +81,17 @@ export async function renderProfileEdit(ctx, view) {
         <div class="fld"><label>Servicio / instrumento</label><input name="service" maxlength="80" value="${esc(me.service || '')}" placeholder="Ej. Violinista · Equipo de alabanza"></div></div>
       <div class="two"><div class="fld"><label>Iglesia</label><input name="church" maxlength="80" value="${esc(me.church || '')}"></div>
         <div class="fld"><label>Ciudad</label><input name="city" maxlength="80" value="${esc(me.city || '')}"></div></div>
+      <div class="two"><div class="fld"><label>Cómo te saludamos</label><select name="gender">
+          <option value=""${!me.gender ? ' selected' : ''}>Prefiero no decirlo</option>
+          <option value="m"${me.gender === 'm' ? ' selected' : ''}>Hermano</option>
+          <option value="f"${me.gender === 'f' ? ' selected' : ''}>Hermana</option></select>
+          <span class="hint">Solo se usa para el trato: “conectar con hermano/hermana”.</span></div>
       <div class="fld"><label>Sobre mí</label><textarea name="bio" maxlength="400">${esc(me.bio || '')}</textarea><span class="hint">Hasta 400 caracteres.</span></div>
-      <div class="two"><div class="fld"><label>Red social / enlace</label><input name="social" maxlength="140" value="${esc(me.social || '')}" placeholder="instagram.com/usuario"></div>
         <div class="fld"><label>Privacidad</label><select name="privacy"><option value="public"${me.privacy !== 'private' ? ' selected' : ''}>Público · la comunidad ve tu perfil</option><option value="private"${me.privacy === 'private' ? ' selected' : ''}>Privado · solo nombre y foto</option></select></div></div>
+      <div class="fld"><label>Redes sociales</label><span class="hint" style="margin-bottom:.5rem">Escribe solo tu usuario (@ennytoro) o pega el enlace completo. Nosotros armamos el resto.</span>
+        <div class="two"><input name="instagram" maxlength="140" value="${esc(me.instagram || '')}" placeholder="Instagram">
+          <input name="facebook" maxlength="140" value="${esc(me.facebook || '')}" placeholder="Facebook"></div>
+        <input name="tiktok" maxlength="140" value="${esc(me.tiktok || '')}" placeholder="TikTok" style="margin-top:.6rem"></div>
       <div class="cx-row" style="justify-content:flex-end"><button class="btn btn-fill btn-sm"><span>Guardar cambios</span></button></div>
     </form></div>`;
   const up = async (input, kind) => {

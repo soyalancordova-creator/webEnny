@@ -22,13 +22,13 @@ export const DEMO_ACCOUNTS = {
 
 function seed() {
   const users = [
-    { id: 'u-enny', name: 'Enny Toro', service: 'Violinista · Docente', church: 'Guayaquil', city: 'Guayaquil, Ecuador', bio: 'Enseño violín para que la técnica sirva a la adoración. Aquí comparto lo que trabajamos en clase.', social: 'instagram.com/ennytoro', privacy: 'public', avatar: 'public/img/enny-rostro.jpg', cover: 'public/img/enny-escenario.jpg', role: 'admin', created_at: ago(60 * 24 * 200) },
-    { id: 'u-demo', name: 'Alumno de prueba', service: 'Violín · nivel inicial', church: 'Iglesia local', city: 'Guayaquil, Ecuador', bio: 'Empezando mi camino con el violín.', social: '', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 12) },
-    { id: 'u-sara', name: 'Sara Ríos', service: 'Pianista · Comunidad Gracia', church: 'Comunidad Gracia', city: 'Quito', bio: 'Pianista de alabanza. Me encanta armonizar himnos.', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 80) },
-    { id: 'u-daniela', name: 'Daniela Cruz', service: 'Violinista · Bogotá', church: 'Iglesia El Camino', city: 'Bogotá', bio: 'Tercer año de violín. Sirvo los domingos.', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 60) },
-    { id: 'u-mateo', name: 'Mateo León', service: 'Director de alabanza', church: 'Centro Cristiano Vida', city: 'Cuenca', bio: 'Dirijo un equipo de 12 músicos.', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 45) },
-    { id: 'u-elena', name: 'Elena Vargas', service: 'Voz · coro juvenil', church: 'Iglesia Bautista Central', city: 'Guayaquil', bio: '', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 30) },
-    { id: 'u-josue', name: 'Josué Mendoza', service: 'Violonchelo', church: 'Iglesia El Camino', city: 'Manta', bio: 'Chelista autodidacta, aprendiendo a leer mejor.', privacy: 'private', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 20) },
+    { id: 'u-enny', gender: 'f', name: 'Enny Toro', service: 'Violinista · Docente', church: 'Guayaquil', city: 'Guayaquil, Ecuador', bio: 'Enseño violín para que la técnica sirva a la adoración. Aquí comparto lo que trabajamos en clase.', social: 'instagram.com/ennytoro', privacy: 'public', avatar: 'public/img/enny-rostro.jpg', cover: 'public/img/enny-escenario.jpg', role: 'admin', created_at: ago(60 * 24 * 200) },
+    { id: 'u-demo', gender: 'm', name: 'Alumno de prueba', service: 'Violín · nivel inicial', church: 'Iglesia local', city: 'Guayaquil, Ecuador', bio: 'Empezando mi camino con el violín.', social: '', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 12) },
+    { id: 'u-sara', gender: 'f', name: 'Sara Ríos', service: 'Pianista · Comunidad Gracia', church: 'Comunidad Gracia', city: 'Quito', bio: 'Pianista de alabanza. Me encanta armonizar himnos.', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 80) },
+    { id: 'u-daniela', gender: 'f', name: 'Daniela Cruz', service: 'Violinista · Bogotá', church: 'Iglesia El Camino', city: 'Bogotá', bio: 'Tercer año de violín. Sirvo los domingos.', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 60) },
+    { id: 'u-mateo', gender: 'm', name: 'Mateo León', service: 'Director de alabanza', church: 'Centro Cristiano Vida', city: 'Cuenca', bio: 'Dirijo un equipo de 12 músicos.', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 45) },
+    { id: 'u-elena', gender: 'f', name: 'Elena Vargas', service: 'Voz · coro juvenil', church: 'Iglesia Bautista Central', city: 'Guayaquil', bio: '', privacy: 'public', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 30) },
+    { id: 'u-josue', gender: 'm', name: 'Josué Mendoza', service: 'Violonchelo', church: 'Iglesia El Camino', city: 'Manta', bio: 'Chelista autodidacta, aprendiendo a leer mejor.', privacy: 'private', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 20) },
   ];
   const groups = [
     { id: 'g-oracion', name: 'Oración & Cuerdas', description: 'Violinistas y chelistas que oran antes de ministrar. Compartimos peticiones, ensayos y ánimo para el domingo.', privacy: 'private', cover: 'public/img/enny-concierto.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 90), rules: 'Hablamos con gracia. Lo que se comparte en oración, se queda en el grupo.' },
@@ -106,7 +106,7 @@ function seed() {
   const subscriptions = [
     { user_id: 'u-demo', provider: 'demo', plan: 'anual', status: 'active', current_period_end: new Date(Date.now() + 300 * 86400000).toISOString() },
   ];
-  // acompañar = seguir. Quien te acompaña ve tus historias.
+  // conectar = vínculo entre hermanos. Quien te conecta ve tus historias.
   const f = (a, b) => ({ follower: a, target: b, created_at: ago(60 * 24 * 5) });
   const follows = [
     f('u-demo', 'u-enny'), f('u-demo', 'u-daniela'), f('u-demo', 'u-sara'),
@@ -136,13 +136,13 @@ const DAY = 86400000;
 
 export function createDemoStore() {
   let db = load();
-  // los datos viejos del navegador no traen historias ni acompañamientos
+  // los datos viejos del navegador no traen historias ni conexiones
   if (!db.follows) { db.follows = []; db.stories = []; db.story_views = []; }
   const listeners = { msg: new Map(), notif: new Set() };
   const commit = () => save(db);
   const meId = () => localStorage.getItem(SESSION);
   const user = (id) => db.users.find((u) => u.id === id);
-  const pub = (u) => u && { id: u.id, name: u.name, avatar: u.avatar, service: u.service, role: u.role };
+  const pub = (u) => u && { id: u.id, name: u.name, avatar: u.avatar, service: u.service, role: u.role, gender: u.gender || '' };
   const need = () => { const id = meId(); if (!id || !user(id)) throw new Error('Tu sesión terminó. Vuelve a entrar.'); return id; };
   const isAdmin = () => user(meId())?.role === 'admin';
   // igual que has_access() en SQL: cancelada conserva acceso hasta el fin del periodo pagado
@@ -195,6 +195,7 @@ export function createDemoStore() {
       const posts = db.posts.filter((p) => p.author === id && !p.group).length;
       return { ...pub(u), cover: u.cover, bio: hidden ? '' : u.bio, church: hidden ? '' : u.church, city: hidden ? '' : u.city,
         social: hidden ? '' : u.social, privacy: u.privacy, created_at: u.created_at, hidden,
+        instagram: hidden ? '' : u.instagram || '', facebook: hidden ? '' : u.facebook || '', tiktok: hidden ? '' : u.tiktok || '', gender: u.gender || '',
         iFollow: db.follows.some((f) => f.follower === me && f.target === id),
         stats: { posts, groups, amens: db.reactions.filter((r) => db.posts.find((p) => p.id === r.post_id)?.author === id).length,
           followers: db.follows.filter((f) => f.target === id).length, following: db.follows.filter((f) => f.follower === id).length },
@@ -202,7 +203,7 @@ export function createDemoStore() {
     },
     async updateMe(patch) {
       const u = user(need());
-      ['name', 'service', 'church', 'city', 'bio', 'social', 'privacy'].forEach((k) => { if (k in patch) u[k] = String(patch[k] ?? '').slice(0, k === 'bio' ? 400 : 120); });
+      ['name', 'service', 'church', 'city', 'bio', 'social', 'privacy', 'gender', 'instagram', 'facebook', 'tiktok'].forEach((k) => { if (k in patch) u[k] = String(patch[k] ?? '').slice(0, k === 'bio' ? 400 : 120); });
       commit(); return this.me();
     },
     async uploadAvatar(img) { const u = user(need()); u.avatar = (await saveImage(img)).url; commit(); return u.avatar; },
@@ -216,15 +217,15 @@ export function createDemoStore() {
         .map((u) => ({ ...pub(u), church: u.privacy === 'private' ? '' : u.church, iFollow: db.follows.some((f) => f.follower === me && f.target === u.id), isMe: u.id === me }));
     },
 
-    /* ---------- acompañar (seguir) ---------- */
+    /* ---------- conectar (hermanos en Cristo) ---------- */
     async follow(userId) {
-      const me = need(); if (userId === me) throw new Error('No puedes acompañarte a ti misma.');
+      const me = need(); if (userId === me) throw new Error('No puedes conectarte contigo misma.');
       if (!user(userId)) throw new Error('Perfil no encontrado.');
       const i = db.follows.findIndex((f) => f.follower === me && f.target === userId);
       if (i >= 0) db.follows.splice(i, 1);
       else {
         db.follows.push({ follower: me, target: userId, created_at: now() });
-        notify({ user: userId, kind: 'follow', title: `${user(me).name} ahora te acompaña`, body: '', link: `#/perfil/${me}`, actor: me });
+        notify({ user: userId, kind: 'follow', title: `${user(me).name} se conectó contigo`, body: '', link: `#/perfil/${me}`, actor: me });
       }
       commit(); return i < 0;
     },

@@ -28,6 +28,11 @@ alter table public.profiles add column if not exists city      text check (city 
 alter table public.profiles add column if not exists social    text check (social is null or char_length(social) <= 160);
 alter table public.profiles add column if not exists cover_url text;
 alter table public.profiles add column if not exists privacy   text not null default 'public' check (privacy in ('public','private'));
+-- trato (hermano/hermana) y redes: se aceptan como usuario o como enlace
+alter table public.profiles add column if not exists gender    text check (gender is null or gender in ('m','f',''));
+alter table public.profiles add column if not exists instagram text check (instagram is null or char_length(instagram) <= 140);
+alter table public.profiles add column if not exists facebook  text check (facebook  is null or char_length(facebook)  <= 140);
+alter table public.profiles add column if not exists tiktok    text check (tiktok    is null or char_length(tiktok)    <= 140);
 alter table public.profiles drop constraint if exists profiles_bio_len;
 alter table public.profiles add constraint profiles_bio_len check (bio is null or char_length(bio) <= 400);
 
@@ -40,7 +45,11 @@ create view public.public_profiles as
          case when p.privacy = 'public' or p.id = auth.uid() then p.bio    end as bio,
          case when p.privacy = 'public' or p.id = auth.uid() then p.church end as church,
          case when p.privacy = 'public' or p.id = auth.uid() then p.city   end as city,
-         case when p.privacy = 'public' or p.id = auth.uid() then p.social end as social
+         case when p.privacy = 'public' or p.id = auth.uid() then p.social end as social,
+         p.gender,
+         case when p.privacy = 'public' or p.id = auth.uid() then p.instagram end as instagram,
+         case when p.privacy = 'public' or p.id = auth.uid() then p.facebook  end as facebook,
+         case when p.privacy = 'public' or p.id = auth.uid() then p.tiktok    end as tiktok
   from public.profiles p;
 revoke all on public.public_profiles from anon;
 grant select on public.public_profiles to authenticated;
@@ -649,7 +658,7 @@ create or replace function public.notify_follow() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   insert into public.notifications (user_id, kind, title, link, actor_id)
-  values (new.target_id, 'follow', public.display_name(new.follower_id) || ' ahora te acompaña',
+  values (new.target_id, 'follow', public.display_name(new.follower_id) || ' se conectó contigo',
           '#/perfil/' || new.follower_id, new.follower_id);
   return new;
 end $$;

@@ -23,6 +23,37 @@ export function avatar(p, cls = '') {
   return `<span class="av ${cls}" title="${esc(name)}">${img}</span>`;
 }
 
+/* Trato por género: 'f' hermana, 'm' hermano, vacío → neutro. */
+export function hermano(p) {
+  const g = p && p.gender;
+  return g === 'f' ? 'hermana' : g === 'm' ? 'hermano' : null;
+}
+/** Etiqueta del botón para conectar con alguien. */
+export function conectarTxt(p, yaConectados) {
+  if (yaConectados) return 'Hermanos en Cristo';
+  const h = hermano(p);
+  return h ? `Conectar con ${h}` : 'Conectar';
+}
+
+/* Redes: acepta "@usuario", "usuario" o el enlace completo y arma la URL. */
+const REDES = {
+  instagram: { base: 'https://instagram.com/', dom: 'instagram.com', label: 'Instagram' },
+  facebook: { base: 'https://facebook.com/', dom: 'facebook.com', label: 'Facebook' },
+  tiktok: { base: 'https://tiktok.com/@', dom: 'tiktok.com', label: 'TikTok' },
+};
+export function redSocial(tipo, valor) {
+  const r = REDES[tipo]; if (!r || !valor) return null;
+  let v = String(valor).trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) {
+    const user = v.replace(/\/+$/, '').split('/').pop().replace(/^@/, '');
+    return { url: v, user: user ? '@' + user : r.label, label: r.label };
+  }
+  if (v.includes(r.dom)) return { url: 'https://' + v.replace(/^\/+/, ''), user: v.split('/').pop().replace(/^@/, '') || r.label, label: r.label };
+  v = v.replace(/^@/, '');
+  return { url: r.base + encodeURIComponent(v), user: '@' + v, label: r.label };
+}
+
 export function ago(iso) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 50) return 'ahora';
