@@ -3,6 +3,8 @@
 Dos productos en un repo: el **sitio de Enny Toro** (violinista en Guayaquil) y **Hosannia**,
 la herramienta de partituras con comunidad. El sitio manda a la gente a Hosannia; Hosannia tendrá
 su propio dominio (`HOSANNIA_URL` en config.js reapunta todos los enlaces `data-hos`).
+`vercel.json` ya trae las rutas limpias: `/entrar`, `/app`, `/terminos`, `/privacidad`, y la
+raíz de `hosannia.com` sirve el acceso en cuanto el dominio apunte aquí.
 Web estática (HTML + CSS + JS, sin framework ni build) sobre **Supabase** (auth, base de datos, storage),
 desplegada en **Vercel**. No usar "de Córdova" en el sitio.
 
@@ -13,7 +15,7 @@ desplegada en **Vercel**. No usar "de Córdova" en el sitio.
   resolver `index.html` para `/` automáticamente (muestra listado de archivos) a menos que el rewrite
   esté explícito. Si `npm run dev` muestra "Files within enny-violin" en vez del sitio, es esto.
 - No hay build: Vercel publica los archivos tal cual.
-- `npm run test:rls` — 105 pruebas de RLS contra Postgres real en WASM (PGlite), con un stub de
+- `npm run test:rls` — 123 pruebas de RLS contra Postgres real en WASM (PGlite), con un stub de
   Supabase (`auth.uid()`, roles, storage). Correrlo después de tocar cualquier policy de
   `supabase/campus.sql`. `CAMPUS_SQL=ruta.sql` prueba otra versión del SQL (útil para mutaciones).
 
@@ -35,7 +37,22 @@ la biblioteca; la comunidad va después. SPA por hash (`#/comunidad`, `#/bibliot
 - Esquema: `supabase/campus.sql`, se ejecuta **después** de `schema.sql`. Notificaciones personales
   solo por triggers; rate limit por trigger; la edad nunca sale en `public_profiles`.
 - Fotos: se comprimen en el navegador (`media.js`, WebP/JPEG, sin EXIF/GPS) antes de subir.
-- **Vocabulario**: seguir = *acompañar*; unirse a una iglesia = *congregarse* (`kind: 'iglesia'`).
+- **Vocabulario**: seguir = *conectar* ("Conectar con hermano/hermana" según `gender`);
+  ya conectados = *Hermanos en Cristo*; unirse a una iglesia = *congregarse* (`kind: 'iglesia'`).
+- **Comunidades ≠ Grupos** (columna `type` en `communities`, la base lo impone):
+  - `community` — escaparate sin chat. Solo publica quien la creó; los demás **siguen**.
+  - `group` — con chat e integrantes. Pestañas: Publicaciones, Chat, Integrantes, Información.
+  - `is_group()` en SQL bloquea publicar a un seguidor y abrir chat en una comunidad.
+- **Chat directo** (`views/chat.js`): botón burbuja flotante. Tabla `direct_messages`;
+  solo se escribe a alguien con quien hay conexión (`conectados()`).
+- **Primeros pasos** (`views/onboarding.js`, ruta `#/primeros-pasos`): seis pantallas tras
+  el registro. `body.solo` oculta las barras mientras duran.
+- **Navegación**: riel de iconos + panel (escritorio) y barra píldora de 5 botones (móvil):
+  Partituras · Inicio · Crear · Buscar · Perfil. Arriba solo van menú, logotipo y avisos;
+  el buscador tiene pantalla propia (`#/buscar`) y el tema vive en Ajustes.
+- **Crear publicación** (`views/compose.js`, `#/crear`): pantalla completa con emojis,
+  ubicación por GPS y fotos comprimidas.
+- El banner de la biblioteca se edita en el panel admin y se guarda en `site_content`.
 - **Historias**: duran 24 h, las ven quienes te acompañan (y las de la docente siempre). Carrusel en
   el inicio (`views/stories.js`), visor a pantalla completa. En SQL las filtra `can_see_story()`.
 - **Ajustes** (`views/settings.js`): cuenta, suscripción (ahí vive `plans.js`), instalar la app y
@@ -71,7 +88,7 @@ la biblioteca; la comunidad va después. SPA por hash (`#/comunidad`, `#/bibliot
 | `index.html` | One-page: hero, video con scroll, stats, sobre mí, servicios, galería, blog, contacto | público |
 | `blog.html` | Todos los artículos, con filtro por categoría | público |
 | `articulo.html` | Un artículo. Lee `?slug=…` (y `#slug=…` de respaldo) | público |
-| `academia.html` | Acceso a Hosannia: login / registro / verificación por código | público |
+| `academia.html` | Acceso a Hosannia (`/entrar`). En móvil abre directo al login, sin scroll | público |
 | `campus.html` | Hosannia: biblioteca, reproductor, comunidad, historias, ajustes | requiere sesión |
 | `terminos.html` · `privacidad.html` | Documentos legales de Hosannia | público |
 | `admin.html` | Panel: edita todo el contenido del sitio y ve los alumnos | requiere rol `admin` |
