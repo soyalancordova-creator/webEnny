@@ -107,11 +107,14 @@ form.on{display:grid}
 /* En el celular no hay portada ni scroll: la app abre directo en el acceso. */
 @media (max-width:720px){
   html,body{height:100%;overflow:hidden}
-  .auth{grid-template-columns:1fr;min-height:100svh}
+  /* la fila única del grid tiene que quedar ATADA a 100svh (no solo "como mínimo"),
+     si no, .main crece con el contenido y nunca le toca hacer scroll a .scroller:
+     el sobrante termina recortado por el overflow:hidden del body, inalcanzable */
+  .auth{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr);height:100svh;min-height:0}
   .side{display:none}
   .main{padding:calc(1rem + env(safe-area-inset-top)) 1rem calc(1rem + env(safe-area-inset-bottom));
-    align-items:stretch;overflow:hidden}
-  .card-auth{width:100%;max-width:none;height:100%;display:flex;flex-direction:column;
+    align-items:stretch;overflow:hidden;height:100%;min-height:0}
+  .card-auth{width:100%;max-width:none;height:100%;min-height:0;display:flex;flex-direction:column;
     border:0;background:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0}
   .card-auth > form,.card-auth > #demoBox,.card-auth > .legal,.card-auth > .inst-box{flex:none}
   .card-auth .scroller{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
