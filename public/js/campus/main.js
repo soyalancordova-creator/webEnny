@@ -35,6 +35,7 @@ const ROUTES = [
   { re: /^#\/historias(?:\/([\w-]+))?$/, view: 'stories', nav: 'comunidad', full: true },
   { re: /^#\/comunidades$/, view: 'groups', nav: 'comunidades' },
   { re: /^#\/comunidad\/([\w-]+)(?:\/(chat|publicaciones|integrantes|info|ajustes))?$/, view: 'group', nav: 'comunidades' },
+  { re: /^#\/grupo\/([\w-]+)(?:\/(chat|publicaciones|integrantes|info|ajustes))?$/, view: 'group', nav: 'grupos' },
   { re: /^#\/perfil(?:\/([\w-]+))?$/, view: 'profile', nav: 'perfil' },
   { re: /^#\/editar-perfil$/, view: 'profileEdit', nav: 'perfil' },
   { re: /^#\/guardados$/, view: 'saved', nav: 'guardados' },
@@ -43,7 +44,7 @@ const ROUTES = [
   { re: /^#\/planes$/, view: 'plans', nav: 'ajustes' },
   { re: /^#\/buscar(?:\?q=(.*))?$/, view: 'search', nav: 'buscar' },
   { re: /^#\/crear$/, view: 'compose', nav: 'crear', full: true },
-  { re: /^#\/grupos$/, view: 'groups', nav: 'grupos' },
+  { re: /^#\/grupos$/, view: 'grupos', nav: 'grupos' },
   { re: /^#\/admin(?:\/(partituras|colecciones|avisos|moderacion|alumnos))?(?:\/([\w-]+))?$/, view: 'admin', nav: 'admin', admin: true },
 ];
 
@@ -55,6 +56,7 @@ const LOADERS = {
   post: () => import('./views/feed.js').then((m) => m.renderPost),
   stories: () => import('./views/stories.js').then((m) => m.renderStories),
   groups: () => import('./views/groups.js').then((m) => m.renderGroups),
+  grupos: () => import('./views/groups.js').then((m) => m.renderGrupos),
   group: () => import('./views/groups.js').then((m) => m.renderGroup),
   profile: () => import('./views/profile.js').then((m) => m.renderProfile),
   profileEdit: () => import('./views/profile.js').then((m) => m.renderProfileEdit),

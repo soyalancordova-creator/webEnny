@@ -297,7 +297,8 @@ export function createSupaStore(sb, cfg = {}) {
         const m = mine.find((x) => x.community_id === g.id); const st = stats.find((x) => x.community_id === g.id) || {};
         const canManage = isAdmin || !!(m && m.status === 'active' && ['owner', 'admin'].includes(m.role));
         const inside = canManage || !!(m && m.status === 'active');
-        return { id: g.id, name: g.name, description: g.description, rules: g.rules, privacy: g.privacy, cover: g.cover_url || '', created_at: g.created_at,
+        const type = g.type || 'group';
+        return { id: g.id, type, isGroup: type === 'group', name: g.name, description: g.description, rules: g.rules, privacy: g.privacy, cover: g.cover_url || '', created_at: g.created_at,
           owner: owners[g.owner_id], members: st.members || 0, pending: st.pending || 0, myStatus: m ? m.status : null, myRole: m ? m.role : null,
           info: { kind: g.kind || 'grupo', phone: g.phone || '', email: g.email || '', address: g.address || '', schedule: g.schedule || '', site: g.site || '' },
           show: { contact: g.show_contact !== false, address: g.show_address !== false, schedule: g.show_schedule !== false, members: g.show_members !== false },
@@ -305,11 +306,12 @@ export function createSupaStore(sb, cfg = {}) {
           canManage };
       });
     },
-    async listGroups({ q: term = '', mine = false } = {}) {
+    async listGroups({ q: term = '', mine = false, type = null } = {}) {
       const me = await uid();
       let r = sb.from('communities_public').select('*').order('created_at', { ascending: false }).limit(60);
       const t = String(term || '').replace(/[%_,()]/g, '').trim();
       if (t) r = r.or(`name.ilike.%${t}%,description.ilike.%${t}%`);
+      if (type) r = r.eq('type', type);
       if (mine) {
         const m = await q(sb.from('community_members').select('community_id').eq('user_id', me).eq('status', 'active'));
         if (!m.length) return []; r = r.in('id', m.map((x) => x.community_id));
@@ -321,11 +323,12 @@ export function createSupaStore(sb, cfg = {}) {
       if (!g) throw new Error('Comunidad no encontrada.');
       return (await this._groups([g]))[0];
     },
-    async createGroup({ name, description, privacy = 'public', cover = null, rules = '', kind = 'grupo' }) {
+    async createGroup({ name, description, privacy = 'public', cover = null, rules = '', kind = 'grupo', type = 'group' }) {
       const me = await uid();
       const g = await q(sb.from('communities').insert({ name: String(name || '').trim().slice(0, 60), description: String(description || '').trim().slice(0, 400),
         rules: String(rules || '').slice(0, 800), privacy: privacy === 'private' ? 'private' : 'public', owner_id: me,
-        kind: kind === 'iglesia' ? 'iglesia' : 'grupo' }).select().single(), 'No se pudo crear la comunidad.');
+        kind: kind === 'iglesia' ? 'iglesia' : 'grupo',
+        type: type === 'community' ? 'community' : 'group' }).select().single(), 'No se pudo crear.');
       if (cover) {
         const path = `${g.id}/cover.${ext(cover.type)}`;
         await upload('community', path, cover.blob);

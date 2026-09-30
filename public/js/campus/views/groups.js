@@ -10,8 +10,14 @@ function cover(g) { return g.cover ? `<img src="${esc(g.cover)}" alt="">` : ''; 
 function privacyLabel(g) { return g.privacy === 'private' ? `${icon('lock')}Privada` : `${icon('globe')}Pública`; }
 
 const isChurch = (g) => (g.info && g.info.kind) === 'iglesia';
-/** En una iglesia no se dice "unirme": se dice congregarme. */
-export const joinWord = (g) => (g.privacy === 'private' ? 'Solicitar acceso' : isChurch(g) ? 'Congregarme' : 'Unirme');
+/** Una comunidad se sigue; a un grupo se entra (y a una iglesia, se congrega uno). */
+export const joinWord = (g) => {
+  if (!g.isGroup) return 'Seguir';
+  if (g.privacy === 'private') return 'Solicitar acceso';
+  return isChurch(g) ? 'Congregarme' : 'Unirme';
+};
+/** Cómo se llama a quien pertenece. */
+export const memberWord = (g, n) => (g.isGroup ? (n === 1 ? 'integrante' : 'integrantes') : (n === 1 ? 'seguidor' : 'seguidores'));
 
 function joinButton(g) {
   if (g.myStatus === 'active') return '';
@@ -22,43 +28,65 @@ function joinButton(g) {
 async function doJoin(ctx, g, after) {
   try {
     const st = await ctx.store.joinGroup(g.id);
-    toast(st === 'active' ? (isChurch(g) ? `Ya te congregas en ${g.name}.` : `Te uniste a ${g.name}.`) : 'Solicitud enviada. Te avisamos cuando te acepten.');
+    toast(st === 'active'
+      ? (!g.isGroup ? `Ahora sigues a ${g.name}.` : isChurch(g) ? `Ya te congregas en ${g.name}.` : `Te uniste a ${g.name}.`)
+      : 'Solicitud enviada. Te avisamos cuando te acepten.');
     after();
   } catch (e) { toast(e.message); }
 }
 
-/* ---------- listado ---------- */
-export async function renderGroups(ctx, view) {
-  ctx.setTitle('Comunidades');
+/* ---------- listado (sirve para comunidades y para grupos) ---------- */
+export function renderGroups(ctx, view) { return lista(ctx, view, 'community'); }
+export function renderGrupos(ctx, view) { return lista(ctx, view, 'group'); }
+
+async function lista(ctx, view, type) {
+  const esGrupo = type === 'group';
+  const titulo = esGrupo ? 'Grupos' : 'Comunidades';
+  ctx.setTitle(titulo);
   view.innerHTML = `<div style="max-width:1180px;margin:0 auto">
-    <div class="cx-h"><div><span class="eyebrow">Comunidades</span><h1>Grupos con propósito</h1><p>Conversa, aprende y ora con personas que sirven como tú.</p></div>
-      <button class="btn btn-fill btn-sm" id="newG"><span>${icon('plus')} Crear comunidad</span></button></div>
-    <div class="cx-row" style="margin-bottom:1rem"><button class="cx-chip on" data-f="all">Todas</button><button class="cx-chip" data-f="mine">Mis comunidades</button>
-      <input id="gq" placeholder="Buscar comunidad…" style="margin-left:auto;padding:.55rem .9rem;border-radius:12px;border:1px solid var(--hair);background:var(--bg);color:var(--ink);font:inherit;font-size:.86rem;min-width:220px"></div>
+    <div class="pg-head"><h1>${titulo}</h1>
+      <div class="cx-row">
+        <button class="cx-iconbtn" id="gFilt" aria-label="Filtrar">${icon('sliders')}<span class="fdot" hidden></span></button>
+        <button class="cx-iconbtn" id="newG" aria-label="Crear ${esGrupo ? 'grupo' : 'comunidad'}">${icon('plus')}</button>
+      </div></div>
+    <div class="cx-search" style="max-width:none;margin-bottom:1.1rem">${icon('search')}
+      <input id="gq" placeholder="Buscar ${esGrupo ? 'grupo' : 'comunidad'}…"></div>
     <div class="gl" id="gl"></div></div>`;
+
   const gl = $('#gl', view); let mine = false, term = '', t = 0;
   const load = async () => {
     loading(gl);
     try {
-      const gs = await ctx.store.listGroups({ q: term, mine });
-      if (!gs.length) { empty(gl, 'users', mine ? 'Todavía no te unes a ninguna comunidad.' : 'No encontramos comunidades con ese nombre.'); return; }
+      const gs = await ctx.store.listGroups({ q: term, mine, type });
+      if (!gs.length) { empty(gl, 'users', mine ? `Todavía no sigues ning${esGrupo ? 'ún grupo' : 'una comunidad'}.` : 'No encontramos nada con ese nombre.'); return; }
       gl.innerHTML = gs.map((g) => `<article class="cx-card gcd" data-id="${esc(g.id)}">
-        <a class="cv" href="#/comunidad/${esc(g.id)}">${cover(g)}</a>
-        <div class="bd"><span class="pill">${privacyLabel(g)}</span><h3><a href="#/comunidad/${esc(g.id)}">${esc(g.name)}</a></h3><p>${esc(g.description)}</p>
-          <div class="ft"><small>${icon('users')}${g.members} integrantes</small>${g.myStatus === 'active' ? `<a class="btn btn-ghost btn-sm" href="#/comunidad/${esc(g.id)}"><span>Abrir</span></a>` : joinButton(g)}</div></div></article>`).join('');
+        <a class="cv" href="#/${esGrupo ? 'grupo' : 'comunidad'}/${esc(g.id)}">${cover(g)}</a>
+        <div class="bd"><span class="pill">${privacyLabel(g)}</span><h3><a href="#/${esGrupo ? 'grupo' : 'comunidad'}/${esc(g.id)}">${esc(g.name)}</a></h3><p>${esc(g.description)}</p>
+          <div class="ft"><small>${icon('users')}${g.members} ${memberWord(g, g.members)}</small>${g.myStatus === 'active'
+            ? `<a class="btn btn-ghost btn-sm" href="#/${esGrupo ? 'grupo' : 'comunidad'}/${esc(g.id)}"><span>Abrir</span></a>` : joinButton(g)}</div></div></article>`).join('');
       $$('.gcd', gl).forEach((el) => { const b = $('[data-join]', el); if (b) b.onclick = () => doJoin(ctx, gs.find((g) => g.id === el.dataset.id), load); });
     } catch (e) { empty(gl, 'info', e.message); }
   };
-  $$('[data-f]', view).forEach((b) => { b.onclick = () => { mine = b.dataset.f === 'mine'; $$('[data-f]', view).forEach((x) => x.classList.toggle('on', x === b)); load(); }; });
+  $('#gFilt', view).onclick = (e) => {
+    mine = !mine;
+    e.currentTarget.classList.toggle('on', mine);
+    $('#gFilt .fdot', view).hidden = !mine;
+    toast(mine ? (esGrupo ? 'Solo mis grupos' : 'Solo las que sigo') : 'Viendo todo');
+    load();
+  };
   $('#gq', view).oninput = (e) => { clearTimeout(t); t = setTimeout(() => { term = e.target.value.trim(); load(); }, 260); };
-  $('#newG', view).onclick = () => createGroupDialog(ctx);
+  $('#newG', view).onclick = () => createGroupDialog(ctx, type);
   load();
 }
 
-function createGroupDialog(ctx) {
+function createGroupDialog(ctx, type = 'group') {
+  const esGrupo = type === 'group';
   let coverImg = null;
-  const m = modal({ title: 'Crear una comunidad', body: `<div style="display:grid;gap:.9rem">
-    <div class="fld"><label>¿Qué estás creando?</label><select id="gK"><option value="grupo">Un grupo · ministerio, taller o tema</option><option value="iglesia">Una iglesia · congregación con sus servicios</option></select></div>
+  const m = modal({ title: esGrupo ? 'Crear un grupo' : 'Crear una comunidad', body: `<div style="display:grid;gap:.9rem">
+    <p class="muted" style="font-size:.86rem;line-height:1.5">${esGrupo
+      ? 'Un grupo tiene chat e integrantes: sirve para tu equipo, tu ensayo o tu ministerio.'
+      : 'Una comunidad es un espacio de anuncios: solo publicas tú y las personas te siguen.'}</p>
+    <div class="fld"><label>¿Qué representa?</label><select id="gK"><option value="grupo">${esGrupo ? 'Un equipo o ministerio' : 'Una marca, proyecto o persona'}</option><option value="iglesia">Una iglesia</option></select></div>
     <div class="fld"><label>Nombre</label><input id="gN" maxlength="60" placeholder="Ej. Violinistas de adoración"></div>
     <div class="fld"><label>Propósito</label><textarea id="gD" maxlength="400" placeholder="¿Qué conversaciones tendrá esta comunidad?"></textarea></div>
     <div class="fld"><label>Normas (opcional)</label><textarea id="gR" maxlength="800" style="min-height:80px" placeholder="Ej. Hablamos con gracia. Lo que se comparte en oración, se queda aquí."></textarea></div>
@@ -69,8 +97,8 @@ function createGroupDialog(ctx) {
   $('#gGo', m.body).onclick = async (e) => {
     const b = e.currentTarget; b.disabled = true;
     try {
-      const g = await ctx.store.createGroup({ name: $('#gN', m.body).value, description: $('#gD', m.body).value, rules: $('#gR', m.body).value, privacy: $('#gP', m.body).value, cover: coverImg, kind: $('#gK', m.body).value });
-      m.close(); toast('Comunidad creada. Completa sus datos en Configuración.'); ctx.go(`#/comunidad/${g.id}/ajustes`);
+      const g = await ctx.store.createGroup({ name: $('#gN', m.body).value, description: $('#gD', m.body).value, rules: $('#gR', m.body).value, privacy: $('#gP', m.body).value, cover: coverImg, kind: $('#gK', m.body).value, type });
+      m.close(); toast(`${esGrupo ? 'Grupo creado' : 'Comunidad creada'}. Completa sus datos en Configuración.`); ctx.go(`#/${esGrupo ? 'grupo' : 'comunidad'}/${g.id}/ajustes`);
     } catch (err) { toast(err.message); b.disabled = false; }
   };
 }
@@ -81,25 +109,35 @@ export async function renderGroup(ctx, view, [id, tab]) {
   try { g = await ctx.store.getGroup(id); } catch (e) { empty(view, 'info', e.message); return; }
   ctx.setTitle(g.name);
   const member = g.myStatus === 'active';
-  tab = tab || (member ? 'chat' : 'publicaciones');
+  const base = g.isGroup ? 'grupo' : 'comunidad';
+  // las publicaciones abren primero; el chat solo existe en los grupos
+  tab = tab || 'publicaciones';
+  if (tab === 'chat' && !g.isGroup) tab = 'publicaciones';
   view.innerHTML = `<div style="max-width:1180px;margin:0 auto">
     <div class="gp-cover">${cover(g)}</div>
     <div class="gp-head"><span class="gthumb">${g.cover ? `<img src="${esc(g.cover)}" alt="">` : icon('users')}</span>
-      <div><h1>${esc(g.name)}</h1><div class="meta"><span>${privacyLabel(g)}</span><span>${g.members} integrantes</span><span>Creada por ${esc(g.owner ? g.owner.name : '')}</span></div></div>
+      <div><h1>${esc(g.name)}</h1><div class="meta"><span>${privacyLabel(g)}</span><span>${g.members} ${memberWord(g, g.members)}</span><span>Creada por ${esc(g.owner ? g.owner.name : '')}</span></div></div>
       <div class="acts">${joinButton(g)}<button class="btn btn-ghost btn-sm" data-invite style="color:#fff;border-color:rgba(255,255,255,.4)"><span>${icon('link')} Invitar</span></button>
       ${member && g.myRole !== 'owner' ? `<button class="btn btn-ghost btn-sm" data-leave style="color:#fff;border-color:rgba(255,255,255,.4)"><span>Salir</span></button>` : ''}</div>
     </div>
     <nav class="gp-tabs" role="tablist">
-      ${[['chat', 'comment', 'Chat'], ['publicaciones', 'feed', 'Publicaciones'], ['integrantes', 'users', `Integrantes <span class="n">${g.showMembers ? g.members : '·'}${g.canManage && g.pending ? ` · ${g.pending} por aprobar` : ''}</span>`], ['info', 'info', 'Información'], ...(g.canManage ? [['ajustes', 'settings', 'Configuración']] : [])]
+      ${[['publicaciones', 'feed', 'Publicaciones'],
+         ...(g.isGroup ? [['chat', 'comment', 'Chat']] : []),
+         ['integrantes', 'users', `${g.isGroup ? 'Integrantes' : 'Seguidores'} <span class="n">${g.showMembers ? g.members : '·'}${g.canManage && g.pending ? ` · ${g.pending} por aprobar` : ''}</span>`],
+         ['info', 'info', 'Información'],
+         ...(g.canManage ? [['ajustes', 'settings', 'Configuración']] : [])]
         .map(([k, ic, l]) => `<button class="${k === tab ? 'on' : ''}" data-tab="${k}" role="tab">${icon(ic)}${l}</button>`).join('')}
     </nav>
     <div class="gp-grid"><div id="tabBody" style="min-width:0"></div><aside id="gside" style="display:grid;gap:1rem"></aside></div>
   </div>`;
   const b = $('[data-join]', view); if (b) b.onclick = () => doJoin(ctx, g, () => renderGroup(ctx, view, [id, tab]));
-  $('[data-invite]', view).onclick = async () => { await navigator.clipboard.writeText(`${location.origin}${location.pathname}#/comunidad/${g.id}`); toast('Enlace copiado. Quien lo abra necesita cuenta para entrar.'); };
+  $('[data-invite]', view).onclick = async () => { await navigator.clipboard.writeText(`${location.origin}${location.pathname}#/${base}/${g.id}`); toast('Enlace copiado. Quien lo abra necesita cuenta para entrar.'); };
   const lv = $('[data-leave]', view);
-  if (lv) lv.onclick = async () => { if (!(await confirmBox(`¿Salir de ${g.name}?`, 'Salir'))) return; try { await ctx.store.leaveGroup(g.id); toast('Saliste de la comunidad.'); ctx.go('#/comunidades'); } catch (e) { toast(e.message); } };
-  $$('[data-tab]', view).forEach((t) => { t.onclick = () => ctx.go(`#/comunidad/${g.id}/${t.dataset.tab}`); });
+  if (lv) lv.onclick = async () => {
+    if (!(await confirmBox(g.isGroup ? `¿Salir de ${g.name}?` : `¿Dejar de seguir a ${g.name}?`, g.isGroup ? 'Salir' : 'Dejar de seguir'))) return;
+    try { await ctx.store.leaveGroup(g.id); toast(g.isGroup ? 'Saliste del grupo.' : 'Dejaste de seguir.'); ctx.go(g.isGroup ? '#/grupos' : '#/comunidades'); } catch (e) { toast(e.message); }
+  };
+  $$('[data-tab]', view).forEach((t) => { t.onclick = () => ctx.go(`#/${base}/${g.id}/${t.dataset.tab}`); });
 
   sidebar(ctx, g, $('#gside', view));
   const body = $('#tabBody', view);
@@ -113,7 +151,7 @@ export async function renderGroup(ctx, view, [id, tab]) {
 async function sidebar(ctx, g, el) {
   el.innerHTML = `<section class="cx-card cx-pad"><h3 style="font-size:1.05rem;margin-bottom:.4rem">Sobre esta comunidad</h3><p class="muted" style="font-size:.88rem;line-height:1.6">${richText(g.description)}</p>
     ${g.rules ? `<h4 style="font-family:var(--sans);font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);font-weight:400;margin:1rem 0 .4rem">Normas</h4><p class="muted" style="font-size:.85rem;line-height:1.55;white-space:pre-wrap">${esc(g.rules)}</p>` : ''}</section>
-    <section class="cx-card cx-pad"><div class="cx-row" style="justify-content:space-between"><h3 style="font-size:1.05rem">Integrantes</h3><a class="cx-chip" href="#/comunidad/${esc(g.id)}/integrantes">Ver todos</a></div><div class="mini-list" id="memPrev"></div></section>`;
+    <section class="cx-card cx-pad"><div class="cx-row" style="justify-content:space-between"><h3 style="font-size:1.05rem">${g.isGroup ? 'Integrantes' : 'Seguidores'}</h3><a class="cx-chip" href="#/${g.isGroup ? 'grupo' : 'comunidad'}/${esc(g.id)}/integrantes">Ver todos</a></div><div class="mini-list" id="memPrev"></div></section>`;
   if (!g.showMembers) { $('#memPrev', el).innerHTML = '<p class="muted" style="font-size:.84rem">La lista de integrantes es solo para quienes pertenecen a la comunidad.</p>'; return; }
   try {
     const ms = (await ctx.store.listMembers(g.id)).filter((m) => m.status === 'active').slice(0, 6);
@@ -205,8 +243,10 @@ async function postsTab(ctx, g, el) {
   if (!canSee) { el.innerHTML = lockedCard(g); const b = $('[data-join2]', el); if (b) b.onclick = () => doJoin(ctx, g, () => location.reload()); return; }
   el.innerHTML = '<div class="fd-col"><div id="cmpG"></div><div class="fd-col" id="gList"></div></div>';
   const list = $('#gList', el);
-  if (g.myStatus === 'active') $('#cmpG', el).appendChild(composer(ctx, { groupId: g.id, onPosted: (p) => prependPost(list, p, ctx) }));
-  await mountList(list, ctx, { groupId: g.id }, 'Aún no hay publicaciones en esta comunidad.');
+  const puedePublicar = g.isGroup ? g.myStatus === 'active' : g.canManage;
+  if (puedePublicar) $('#cmpG', el).appendChild(composer(ctx, { groupId: g.id, onPosted: (p) => prependPost(list, p, ctx) }));
+  else if (!g.isGroup) $('#cmpG', el).innerHTML = `<p class="muted" style="font-size:.86rem;padding:.2rem .2rem 1rem">${icon('megaphone')} En esta comunidad publica solo ${esc(g.owner ? g.owner.name : 'quien la creó')}.</p>`;
+  await mountList(list, ctx, { groupId: g.id }, `Aún no hay publicaciones en est${g.isGroup ? 'e grupo' : 'a comunidad'}.`);
 }
 
 function lockedCard(g) {
@@ -226,7 +266,7 @@ async function membersTab(ctx, g, el, view) {
       ? '<button class="btn btn-fill btn-sm" data-a="approve"><span>Aprobar</span></button><button class="cx-chip" data-a="remove">Rechazar</button>'
       : `<button class="cx-chip" data-a="admin">${m.role === 'admin' ? 'Quitar moderación' : 'Hacer moderador'}</button><button class="cx-chip" data-a="remove">Quitar</button>`) : ''}</div>`;
   el.innerHTML = `${pending.length ? `<section class="cx-card cx-pad" style="margin-bottom:1rem"><h3 style="font-size:1.05rem;margin-bottom:.5rem">Solicitudes por aprobar</h3><div class="mem">${pending.map(row).join('')}</div></section>` : ''}
-    <section class="cx-card cx-pad"><h3 style="font-size:1.05rem;margin-bottom:.5rem">${active.length} integrantes</h3><div class="mem">${active.map(row).join('')}</div></section>`;
+    <section class="cx-card cx-pad"><h3 style="font-size:1.05rem;margin-bottom:.5rem">${active.length} ${memberWord(g, active.length)}</h3><div class="mem">${active.map(row).join('')}</div></section>`;
   $$('[data-a]', el).forEach((b) => {
     b.onclick = async () => {
       const u = b.closest('[data-u]').dataset.u;

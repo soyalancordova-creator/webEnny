@@ -242,6 +242,26 @@ await allow('Quien administra sí edita los datos', U.enny, () => mustAffect(`up
 await expect('Con el contacto oculto, quien no es integrante no ve el teléfono', U.beto, () => q(`select phone from public.communities_public where id = '${priv}'`), (r) => r.length === 1 && r[0].phone === null);
 await expect('Los integrantes sí ven el teléfono', U.caro, () => q(`select phone from public.communities_public where id = '${priv}'`), (r) => r[0].phone === '0999999999');
 
+/* ---------------- 12. comunidades (escaparate) vs grupos (con chat) ---------------- */
+let comu;
+await allow('Crear una comunidad (escaparate)', U.enny, async () => {
+  comu = (await q(`insert into public.communities (name, description, privacy, owner_id, type) values ('Ministerio Enny', 'avisos', 'public', '${U.enny}', 'community') returning id`))[0].id;
+});
+await allow('Seguir una comunidad', U.beto, () => q(`insert into public.community_members (community_id, user_id, role, status) values ('${comu}', '${U.beto}', 'member', 'active')`));
+await deny('Un seguidor NO publica en la comunidad', U.beto, () => q(`insert into public.feed_posts (author_id, community_id, body) values ('${U.beto}', '${comu}', 'spam')`));
+await allow('Quien creó la comunidad sí publica', U.enny, () => q(`insert into public.feed_posts (author_id, community_id, body) values ('${U.enny}', '${comu}', 'aviso')`));
+await deny('En una comunidad no hay chat', U.beto, () => q(`insert into public.community_messages (community_id, author_id, body) values ('${comu}', '${U.beto}', 'hola')`));
+await deny('Ni siquiera quien la creó puede abrir chat en una comunidad', U.enny, () => q(`insert into public.community_messages (community_id, author_id, body) values ('${comu}', '${U.enny}', 'hola')`));
+
+let grupo;
+await allow('Crear un grupo (con chat)', U.enny, async () => {
+  grupo = (await q(`insert into public.communities (name, description, privacy, owner_id, type) values ('Ensayo jueves', 'equipo', 'public', '${U.enny}', 'group') returning id`))[0].id;
+});
+await allow('Unirse a un grupo', U.beto, () => q(`insert into public.community_members (community_id, user_id, role, status) values ('${grupo}', '${U.beto}', 'member', 'active')`));
+await allow('Un integrante sí publica en el grupo', U.beto, () => q(`insert into public.feed_posts (author_id, community_id, body) values ('${U.beto}', '${grupo}', 'hola equipo')`));
+await allow('Un integrante sí escribe en el chat del grupo', U.beto, () => q(`insert into public.community_messages (community_id, author_id, body) values ('${grupo}', '${U.beto}', 'llego 7pm')`));
+await deny('Quien no es integrante no escribe en el chat del grupo', U.caro, () => q(`insert into public.community_messages (community_id, author_id, body) values ('${grupo}', '${U.caro}', 'hola')`));
+
 /* ---------------- resultado ---------------- */
 results.forEach(([s, n]) => console.log(`${s} ${n}`));
 console.log(`\n${pass} pruebas pasaron · ${failed} fallaron`);

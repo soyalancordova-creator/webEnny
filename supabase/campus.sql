@@ -78,6 +78,10 @@ create table if not exists public.community_members (
 );
 create index if not exists cm_user_idx on public.community_members (user_id, status);
 
+-- 'community' = escaparate sin chat, con seguidores y donde solo publica su creador
+-- 'group'     = espacio de trabajo con chat e integrantes
+alter table public.communities add column if not exists type text not null default 'group' check (type in ('community','group'));
+
 create table if not exists public.community_messages (
   id           uuid primary key default gen_random_uuid(),
   community_id uuid not null references public.communities(id) on delete cascade,
@@ -100,12 +104,17 @@ language sql stable security definer set search_path = public as $$
   select public.is_admin() or exists (select 1 from public.community_members
          where community_id = cid and user_id = auth.uid() and status = 'active' and role in ('owner','admin'));
 $$;
+-- ¿es un grupo (con chat) o una comunidad (escaparate)?
+create or replace function public.is_group(cid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.communities where id = cid and type = 'group');
+$$;
 create or replace function public.community_is_public(cid uuid) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.communities where id = cid and privacy = 'public');
 $$;
-revoke execute on function public.is_member(uuid), public.is_community_manager(uuid), public.community_is_public(uuid) from anon;
-grant  execute on function public.is_member(uuid), public.is_community_manager(uuid), public.community_is_public(uuid) to authenticated;
+revoke execute on function public.is_member(uuid), public.is_community_manager(uuid), public.community_is_public(uuid), public.is_group(uuid) from anon;
+grant  execute on function public.is_member(uuid), public.is_community_manager(uuid), public.community_is_public(uuid), public.is_group(uuid) to authenticated;
 
 -- quien crea la comunidad queda como dueña (no depende del navegador)
 create or replace function public.community_add_owner() returns trigger
@@ -169,7 +178,7 @@ drop policy if exists "msg: borrar"  on public.community_messages;
 create policy "msg: leer"     on public.community_messages for select to authenticated
   using (public.is_member(community_id) or public.is_admin());
 create policy "msg: escribir" on public.community_messages for insert to authenticated
-  with check (author_id = auth.uid() and public.is_member(community_id));
+  with check (author_id = auth.uid() and public.is_member(community_id) and public.is_group(community_id));
 create policy "msg: borrar"   on public.community_messages for delete to authenticated
   using (author_id = auth.uid() or public.is_community_manager(community_id));
 
@@ -243,7 +252,10 @@ drop policy if exists "fp: borrar"   on public.feed_posts;
 create policy "fp: ver" on public.feed_posts for select to authenticated using (
   community_id is null or public.community_is_public(community_id) or public.is_member(community_id) or public.is_admin());
 create policy "fp: publicar" on public.feed_posts for insert to authenticated with check (
-  author_id = auth.uid() and (community_id is null or public.is_member(community_id)));
+  author_id = auth.uid() and (
+    community_id is null
+    or (public.is_group(community_id) and public.is_member(community_id))
+    or public.is_community_manager(community_id)));
 create policy "fp: editar" on public.feed_posts for update to authenticated
   using (author_id = auth.uid()) with check (author_id = auth.uid());
 create policy "fp: borrar" on public.feed_posts for delete to authenticated using (
@@ -623,7 +635,7 @@ alter table public.communities add column if not exists show_members  boolean no
 -- los datos ocultos se tapan en esta vista y el front SIEMPRE lee de aquí.
 drop view if exists public.communities_public;
 create view public.communities_public as
-  select c.id, c.name, c.description, c.rules, c.privacy, c.cover_url, c.owner_id, c.created_at, c.kind,
+  select c.id, c.name, c.description, c.rules, c.privacy, c.cover_url, c.owner_id, c.created_at, c.kind, c.type,
          c.show_contact, c.show_address, c.show_schedule, c.show_members,
          case when c.show_contact  or public.is_member(c.id) then c.phone    end as phone,
          case when c.show_contact  or public.is_member(c.id) then c.email    end as email,

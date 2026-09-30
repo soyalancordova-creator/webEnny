@@ -31,11 +31,11 @@ function seed() {
     { id: 'u-josue', gender: 'm', name: 'Josué Mendoza', service: 'Violonchelo', church: 'Iglesia El Camino', city: 'Manta', bio: 'Chelista autodidacta, aprendiendo a leer mejor.', privacy: 'private', avatar: '', cover: '', role: 'student', created_at: ago(60 * 24 * 20) },
   ];
   const groups = [
-    { id: 'g-oracion', name: 'Oración & Cuerdas', description: 'Violinistas y chelistas que oran antes de ministrar. Compartimos peticiones, ensayos y ánimo para el domingo.', privacy: 'private', cover: 'public/img/enny-concierto.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 90), rules: 'Hablamos con gracia. Lo que se comparte en oración, se queda en el grupo.' },
-    { id: 'g-violin', name: 'Violinistas de adoración', description: 'Técnica, repertorio y preguntas para quienes sirven con el violín en su iglesia.', privacy: 'public', cover: 'public/img/enny-tocando.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 120), rules: 'Preguntas de todo nivel son bienvenidas.' },
-    { id: 'g-teclas', name: 'Teclas que adoran', description: 'Armonía, pads y arreglos para acompañar a la congregación desde el piano.', privacy: 'public', cover: '', owner: 'u-sara', created_at: ago(60 * 24 * 70), rules: '' },
-    { id: 'g-lectura', name: 'Lectura con propósito', description: 'Reto semanal de lectura a primera vista. Cada lunes una partitura nueva.', privacy: 'public', cover: 'public/img/enny-partituras.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 40), rules: '' },
-    { id: 'g-camino', name: 'Iglesia El Camino · Alabanza', description: 'Equipo de alabanza de la Iglesia El Camino. Ensayos, repertorio del domingo y avisos del ministerio.', privacy: 'public', cover: '', owner: 'u-daniela', created_at: ago(60 * 24 * 55), rules: 'Puntualidad en los ensayos. El repertorio se cierra el jueves.',
+    { id: 'g-oracion', type: 'group', name: 'Oración & Cuerdas', description: 'Violinistas y chelistas que oran antes de ministrar. Compartimos peticiones, ensayos y ánimo para el domingo.', privacy: 'private', cover: 'public/img/enny-concierto.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 90), rules: 'Hablamos con gracia. Lo que se comparte en oración, se queda en el grupo.' },
+    { id: 'g-violin', type: 'community', name: 'Violinistas de adoración', description: 'Técnica, repertorio y preguntas para quienes sirven con el violín en su iglesia.', privacy: 'public', cover: 'public/img/enny-tocando.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 120), rules: 'Preguntas de todo nivel son bienvenidas.' },
+    { id: 'g-teclas', type: 'group', name: 'Teclas que adoran', description: 'Armonía, pads y arreglos para acompañar a la congregación desde el piano.', privacy: 'public', cover: '', owner: 'u-sara', created_at: ago(60 * 24 * 70), rules: '' },
+    { id: 'g-lectura', type: 'community', name: 'Lectura con propósito', description: 'Reto semanal de lectura a primera vista. Cada lunes una partitura nueva.', privacy: 'public', cover: 'public/img/enny-partituras.jpg', owner: 'u-enny', created_at: ago(60 * 24 * 40), rules: '' },
+    { id: 'g-camino', type: 'community', name: 'Iglesia El Camino · Alabanza', description: 'Equipo de alabanza de la Iglesia El Camino. Ensayos, repertorio del domingo y avisos del ministerio.', privacy: 'public', cover: '', owner: 'u-daniela', created_at: ago(60 * 24 * 55), rules: 'Puntualidad en los ensayos. El repertorio se cierra el jueves.',
       info: { kind: 'iglesia', phone: '+593 99 000 0000', email: 'alabanza@elcamino.org', address: 'Av. de las Américas 1234, Bogotá', schedule: 'Domingos 9:00 y 11:00 · Ensayo jueves 19:00', site: '' },
       show: { contact: true, address: true, schedule: true, members: true } },
   ];
@@ -288,7 +288,13 @@ export function createDemoStore() {
       const me = need();
       body = String(body || '').trim().slice(0, 3000);
       if (!body && !images.length) throw new Error('Escribe algo o agrega una foto.');
-      if (groupId) { const mm = memberOf(groupId, me); if (!(mm && mm.status === 'active') && !isAdmin()) throw new Error('Únete a la comunidad para publicar.'); }
+      if (groupId) {
+        const g = db.groups.find((x) => x.id === groupId);
+        const mm = memberOf(groupId, me);
+        if ((g?.type || 'group') === 'community') {
+          if (!this._group(g, me).canManage) throw new Error('En una comunidad solo publica quien la creó.');
+        } else if (!(mm && mm.status === 'active') && !isAdmin()) throw new Error('Únete al grupo para publicar.');
+      }
       const media = []; for (const img of images.slice(0, 6)) media.push(await saveImage(img));
       const p = { id: uid(), author: me, type, group: groupId, body, media, created_at: now() };
       db.posts.unshift(p); commit(); return decoratePost(p, me);
@@ -344,9 +350,10 @@ export function createDemoStore() {
     },
 
     /* ---------- comunidades ---------- */
-    async listGroups({ q = '', mine = false } = {}) {
+    async listGroups({ q = '', mine = false, type = null } = {}) {
       const me = need(); q = q.toLowerCase();
       return db.groups.filter((g) => (!q || g.name.toLowerCase().includes(q) || g.description.toLowerCase().includes(q)))
+        .filter((g) => !type || (g.type || 'group') === type)
         .map((g) => this._group(g, me)).filter((g) => !mine || g.myStatus === 'active');
     },
     _group(g, me) {
@@ -362,7 +369,8 @@ export function createDemoStore() {
         site: show.contact || inside ? info.site : '',
         address: show.address || inside ? info.address : '', schedule: show.schedule || inside ? info.schedule : '',
       };
-      return { id: g.id, name: g.name, description: g.description, privacy: g.privacy, cover: g.cover, rules: g.rules, created_at: g.created_at,
+      const type = g.type || 'group';
+      return { id: g.id, type, isGroup: type === 'group', name: g.name, description: g.description, privacy: g.privacy, cover: g.cover, rules: g.rules, created_at: g.created_at,
         owner: pub(user(g.owner)), members: db.members.filter((x) => x.group_id === g.id && x.status === 'active').length,
         pending: db.members.filter((x) => x.group_id === g.id && x.status === 'pending').length,
         info: visible, show, showMembers: show.members || inside,
@@ -390,13 +398,13 @@ export function createDemoStore() {
       commit();
     },
     async getGroup(id) { const me = need(); const g = db.groups.find((x) => x.id === id); if (!g) throw new Error('Comunidad no encontrada.'); return this._group(g, me); },
-    async createGroup({ name, description, privacy = 'public', cover = null, rules = '', kind = 'grupo' }) {
+    async createGroup({ name, description, privacy = 'public', cover = null, rules = '', kind = 'grupo', type = 'group' }) {
       const me = need(); name = String(name || '').trim().slice(0, 60); description = String(description || '').trim().slice(0, 400);
       if (name.length < 3) throw new Error('El nombre necesita al menos 3 letras.');
-      const g = { id: uid(), name, description, privacy: privacy === 'private' ? 'private' : 'public', cover: cover ? (await saveImage(cover)).url : '', owner: me, created_at: now(), rules: String(rules || '').slice(0, 800),
+      const g = { id: uid(), type: type === 'community' ? 'community' : 'group', name, description, privacy: privacy === 'private' ? 'private' : 'public', cover: cover ? (await saveImage(cover)).url : '', owner: me, created_at: now(), rules: String(rules || '').slice(0, 800),
         info: { kind: kind === 'iglesia' ? 'iglesia' : 'grupo', phone: '', email: '', address: '', schedule: '', site: '' }, show: { contact: true, address: true, schedule: true, members: true } };
       db.groups.unshift(g); db.members.push({ group_id: g.id, user_id: me, role: 'owner', status: 'active', joined_at: now() });
-      db.messages.push({ id: uid(), group_id: g.id, author: me, body: 'Bienvenidos. Este es un espacio para crecer y servir juntos.', created_at: now() });
+      if (g.type === 'group') db.messages.push({ id: uid(), group_id: g.id, author: me, body: 'Bienvenidos. Este es un espacio para crecer y servir juntos.', created_at: now() });
       commit(); return this._group(g, me);
     },
     async joinGroup(id) {
@@ -426,12 +434,17 @@ export function createDemoStore() {
       commit();
     },
     async listMessages(groupId) {
-      const me = need(); if (!canSeeGroup(groupId, me) || (!(memberOf(groupId, me)?.status === 'active') && !isAdmin())) throw new Error('Únete a la comunidad para ver el chat.');
+      const me = need();
+      const g0 = db.groups.find((x) => x.id === groupId);
+      if ((g0?.type || 'group') !== 'group') throw new Error('Las comunidades no tienen chat.');
+      if (!canSeeGroup(groupId, me) || (!(memberOf(groupId, me)?.status === 'active') && !isAdmin())) throw new Error('Únete a la comunidad para ver el chat.');
       return db.messages.filter((m) => m.group_id === groupId).sort((a, b) => a.created_at.localeCompare(b.created_at)).slice(-200)
         .map((m) => ({ id: m.id, body: m.body, image: m.image || null, created_at: m.created_at, author: pub(user(m.author)), mine: m.author === me }));
     },
     async sendMessage(groupId, { body = '', image = null }) {
       const me = need(); const mm = memberOf(groupId, me);
+      const g0 = db.groups.find((x) => x.id === groupId);
+      if ((g0?.type || 'group') !== 'group') throw new Error('Las comunidades no tienen chat.');
       if (!(mm && mm.status === 'active') && !isAdmin()) throw new Error('Únete a la comunidad para escribir.');
       body = String(body).trim().slice(0, 2000); if (!body && !image) return null;
       const m = { id: uid(), group_id: groupId, author: me, body, image: image ? (await saveImage(image)).url : null, created_at: now() };
