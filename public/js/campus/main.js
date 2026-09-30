@@ -45,6 +45,7 @@ const ROUTES = [
   { re: /^#\/buscar(?:\?q=(.*))?$/, view: 'search', nav: 'buscar' },
   { re: /^#\/crear(?:\?(.*))?$/, view: 'compose', nav: 'crear', full: true, limpio: true },
   { re: /^#\/primeros-pasos(?:\/(\w+))?$/, view: 'onboarding', nav: '', full: true, limpio: true },
+  { re: /^#\/mensajes\/grupo\/([\w-]+)$/, view: 'mensajeGrupo', nav: '', full: true, limpio: true },
   { re: /^#\/mensajes\/([\w-]+)$/, view: 'conversacion', nav: '', full: true, limpio: true },
   { re: /^#\/mensajes$/, view: 'mensajes', nav: '', full: true, limpio: true },
   { re: /^#\/grupos$/, view: 'grupos', nav: 'grupos' },
@@ -72,6 +73,7 @@ const LOADERS = {
   onboarding: () => import('./views/onboarding.js').then((m) => m.renderOnboarding),
   mensajes: () => import('./views/chat.js').then((m) => m.renderMensajes),
   conversacion: () => import('./views/chat.js').then((m) => m.renderConversacion),
+  mensajeGrupo: () => import('./views/chat.js').then((m) => m.renderMensajesGrupo),
   admin: () => import('./views/admin.js').then((m) => m.renderAdmin),
 };
 

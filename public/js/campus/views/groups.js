@@ -1,8 +1,11 @@
 /* ============================================================
-   COMUNIDADES · listado, página de comunidad con chat abierto
+   COMUNIDADES Y GRUPOS · listado y página de comunidad
+   ------------------------------------------------------------
+   El chat vive solo en la bandeja de Mensajes (chat.js): aquí no
+   hay pestaña de chat, solo un botón que abre #/mensajes/grupo/:id.
 ============================================================ */
 import { icon } from '../icons.js';
-import { $, $$, esc, richText, avatar, ago, clock, dayLabel, toast, modal, confirmBox, lightbox, loading, empty } from '../ui.js';
+import { $, $$, esc, richText, avatar, ago, toast, modal, confirmBox, loading, empty } from '../ui.js';
 import { compressImage } from '../media.js';
 import { composer, mountList, prependPost } from './feed.js';
 
@@ -110,19 +113,19 @@ export async function renderGroup(ctx, view, [id, tab]) {
   ctx.setTitle(g.name);
   const member = g.myStatus === 'active';
   const base = g.isGroup ? 'grupo' : 'comunidad';
-  // las publicaciones abren primero; el chat solo existe en los grupos
-  tab = tab || 'publicaciones';
-  if (tab === 'chat' && !g.isGroup) tab = 'publicaciones';
+  // el chat vive solo en la bandeja de Mensajes, no dentro del grupo
+  tab = (tab && tab !== 'chat') ? tab : 'publicaciones';
   view.innerHTML = `<div style="max-width:1180px;margin:0 auto">
     <div class="gp-cover">${cover(g)}</div>
     <div class="gp-head"><span class="gthumb">${g.cover ? `<img src="${esc(g.cover)}" alt="">` : icon('users')}</span>
       <div><h1>${esc(g.name)}</h1><div class="meta"><span>${privacyLabel(g)}</span><span>${g.members} ${memberWord(g, g.members)}</span><span>Creada por ${esc(g.owner ? g.owner.name : '')}</span></div></div>
-      <div class="acts">${joinButton(g)}<button class="btn btn-ghost btn-sm" data-invite style="color:#fff;border-color:rgba(255,255,255,.4)"><span>${icon('link')} Invitar</span></button>
+      <div class="acts">${joinButton(g)}
+      ${g.isGroup && member ? `<a class="btn btn-ghost btn-sm" href="#/mensajes/grupo/${esc(g.id)}" style="color:#fff;border-color:rgba(255,255,255,.4)"><span>${icon('comment')} Chat</span></a>` : ''}
+      <button class="btn btn-ghost btn-sm" data-invite style="color:#fff;border-color:rgba(255,255,255,.4)"><span>${icon('link')} Invitar</span></button>
       ${member && g.myRole !== 'owner' ? `<button class="btn btn-ghost btn-sm" data-leave style="color:#fff;border-color:rgba(255,255,255,.4)"><span>Salir</span></button>` : ''}</div>
     </div>
     <nav class="gp-tabs" role="tablist">
       ${[['publicaciones', 'feed', 'Publicaciones'],
-         ...(g.isGroup ? [['chat', 'comment', 'Chat']] : []),
          ['integrantes', 'users', `${g.isGroup ? 'Integrantes' : 'Seguidores'} <span class="n">${g.showMembers ? g.members : '·'}${g.canManage && g.pending ? ` · ${g.pending} por aprobar` : ''}</span>`],
          ['info', 'info', 'Información'],
          ...(g.canManage ? [['ajustes', 'settings', 'Configuración']] : [])]
@@ -141,7 +144,6 @@ export async function renderGroup(ctx, view, [id, tab]) {
 
   sidebar(ctx, g, $('#gside', view));
   const body = $('#tabBody', view);
-  if (tab === 'chat') return chatTab(ctx, g, body);
   if (tab === 'integrantes') return membersTab(ctx, g, body, view);
   if (tab === 'info') return infoTab(g, body);
   if (tab === 'ajustes') return settingsTab(ctx, g, body, view);
@@ -274,50 +276,4 @@ async function membersTab(ctx, g, el, view) {
       try { await ctx.store.setMember(g.id, u, b.dataset.a); toast('Listo.'); renderGroup(ctx, view, [g.id, 'integrantes']); } catch (e) { toast(e.message); }
     };
   });
-}
-
-/* ---------- chat ---------- */
-async function chatTab(ctx, g, el) {
-  if (g.myStatus !== 'active' && !ctx.me.isAdmin) { el.innerHTML = lockedCard(g); const b = $('[data-join2]', el); if (b) b.onclick = () => doJoin(ctx, g, () => location.reload()); return; }
-  el.innerHTML = `<section class="cx-card ch"><div class="ch-list" id="chList" aria-live="polite"></div>
-    <form class="ch-form" id="chF"><label class="cx-iconbtn" aria-label="Enviar foto" style="cursor:pointer">${icon('image')}<input type="file" accept="image/*" hidden id="chImg"></label>
-      <textarea id="chT" rows="1" maxlength="2000" placeholder="Escribe con gracia…" aria-label="Mensaje"></textarea>
-      <button class="cx-iconbtn ch-send" aria-label="Enviar">${icon('send')}</button></form></section>`;
-  const list = $('#chList', el), ta = $('#chT', el);
-  const seen = new Set(); let last = null;
-  const nearBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 120;
-  const add = (m, scroll = true) => {
-    if (!m || seen.has(m.id)) return; seen.add(m.id);
-    const d = new Date(m.created_at);
-    if (!last || new Date(last.created_at).toDateString() !== d.toDateString()) {
-      const s = document.createElement('div'); s.className = 'ch-day'; s.textContent = dayLabel(m.created_at); list.appendChild(s); last = null;
-    }
-    const grp = !last || last.author.id !== m.author.id || d - new Date(last.created_at) > 5 * 60000;
-    const row = document.createElement('div');
-    row.className = `ch-msg${m.mine ? ' me' : ''}${grp ? ' grp' : ''}`;
-    row.innerHTML = `<a href="#/perfil/${esc(m.author.id)}">${avatar(m.author, 'sm')}</a><div class="bub"><a class="nm" href="#/perfil/${esc(m.author.id)}">${esc(m.author.name)}</a>${m.image ? `<img src="${esc(m.image)}" alt="Foto">` : ''}${m.body ? richText(m.body) : ''}<time>${clock(m.created_at)}</time></div>`;
-    const im = $('img', row); if (im) im.onclick = () => lightbox([m.image]);
-    const stick = nearBottom();
-    list.appendChild(row); last = m;
-    if (scroll || stick) list.scrollTop = list.scrollHeight;
-  };
-  try { (await ctx.store.listMessages(g.id)).forEach((m) => add(m, false)); list.scrollTop = list.scrollHeight; }
-  catch (e) { list.innerHTML = `<div class="ch-lock">${esc(e.message)}</div>`; return; }
-  if (!seen.size) list.innerHTML = '<div class="cx-empty">Sé la primera persona en escribir.</div>';
-
-  const send = async (payload) => {
-    const e = list.querySelector('.cx-empty'); if (e) e.remove();
-    try { add(await ctx.store.sendMessage(g.id, payload)); } catch (err) { toast(err.message); }
-  };
-  $('#chF', el).onsubmit = (e) => { e.preventDefault(); const v = ta.value.trim(); if (!v) return; ta.value = ''; ta.style.height = ''; send({ body: v }); };
-  ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#chF', el).requestSubmit(); } });
-  ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; });
-  $('#chImg', el).onchange = async (e) => {
-    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-    try { const img = await compressImage(f, { maxSide: 1400, quality: 0.78 }); await send({ body: ta.value.trim(), image: img }); ta.value = ''; }
-    catch (err) { toast(err.message); }
-  };
-  const unsub = ctx.store.subscribeMessages(g.id, (m) => { const e = list.querySelector('.cx-empty'); if (e) e.remove(); add(m, false); });
-  ta.focus({ preventScroll: true });
-  return () => unsub && unsub();
 }

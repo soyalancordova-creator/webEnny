@@ -100,14 +100,14 @@ body.cx-body{background:var(--bg-deep);min-height:100svh}
 
 /* ---------- comunidad: feed ---------- */
 .fd{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:1.4rem;align-items:start;max-width:1080px;margin:0 auto}
-.fd-col{display:grid;gap:1rem;min-width:0}
+.fd-col{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;min-width:0}
 .fd-rail{position:sticky;top:84px;display:grid;gap:1rem}
 /* barra angosta que invita a publicar; al tocarla se abre #/crear a pantalla completa */
 .cmp-mini{display:flex;align-items:center;gap:.7rem;cursor:pointer;padding:.65rem .9rem;transition:border-color .25s,background .25s}
 .cmp-mini:hover{border-color:var(--gold)}
 .cmp-mini-tx{flex:1;min-width:0;color:var(--ink-3);font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-.post{padding:1.2rem 1.25rem .9rem}
+.post{padding:1.2rem 1.25rem .9rem;min-width:0}
 .post-h{display:flex;align-items:center;gap:.75rem}
 .post-h .who{min-width:0;flex:1}
 .post-h .who a{font-weight:400;font-size:.95rem}
@@ -152,7 +152,7 @@ body.cx-body{background:var(--bg-deep);min-height:100svh}
 .rx-pop button small{font-size:.58rem;letter-spacing:.06em;color:var(--ink-2)}
 
 /* comentarios */
-.cm{margin-top:.6rem;padding-top:.7rem;border-top:1px solid var(--hair);display:grid;gap:.7rem}
+.cm{margin-top:.6rem;padding-top:.7rem;border-top:1px solid var(--hair);display:grid;grid-template-columns:minmax(0,1fr);gap:.7rem}
 .cm-item{display:flex;gap:.6rem;align-items:flex-start}
 .cm-bub{flex:1;min-width:0}
 .cm-bub .b{display:inline-block;max-width:100%;padding:.6rem .85rem;border-radius:16px;background:var(--glass-2);border:1px solid var(--hair);font-size:.9rem;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
@@ -160,7 +160,7 @@ body.cx-body{background:var(--bg-deep);min-height:100svh}
 .cm-bub .meta{display:flex;gap:.9rem;padding:.25rem .6rem;font-size:.7rem;color:var(--ink-3)}
 .cm-bub .meta button{color:inherit}
 .cm-bub .meta button:hover{color:var(--ink)}
-.cm-replies{margin-top:.55rem;display:grid;gap:.55rem}
+.cm-replies{margin-top:.55rem;display:grid;grid-template-columns:minmax(0,1fr);gap:.55rem}
 .cm-form{display:flex;gap:.6rem;align-items:center}
 .cm-form input{flex:1;min-width:0;padding:.62rem .9rem;border-radius:999px;border:1px solid var(--hair);background:var(--bg);color:var(--ink);font:inherit;font-size:.88rem;outline:none}
 .cm-form input:focus{border-color:var(--gold)}
@@ -232,7 +232,7 @@ body.cx-body{background:var(--bg-deep);min-height:100svh}
 .ch-send{background:var(--fill)!important;color:var(--fill-ink)!important;border-color:transparent!important}
 .ch-lock{padding:3rem 1.5rem;text-align:center;color:var(--ink-2)}
 
-.mem{display:grid;gap:.25rem}
+.mem{display:grid;grid-template-columns:minmax(0,1fr);gap:.25rem}
 .mem-item{display:flex;align-items:center;gap:.75rem;padding:.6rem .5rem;border-radius:14px}
 .mem-item:hover{background:var(--glass-2)}
 .mem-item .who{flex:1;min-width:0}
@@ -915,7 +915,7 @@ body.sin-tabs .cx-tabs,body.sin-tabs .chat-fab{display:none}
   background:var(--wine);color:#fff;border:3px solid var(--bg-deep)}
 .ob-av .cam .ic{width:15px;height:15px}
 
-.ob-lista{display:grid;gap:.5rem}
+.ob-lista{display:grid;grid-template-columns:minmax(0,1fr);gap:.5rem}
 .ob-persona{display:flex;align-items:center;gap:.75rem;padding:.7rem;border-radius:16px;
   border:1px solid var(--hair);background:var(--glass)}
 .ob-persona .tx{flex:1;min-width:0}

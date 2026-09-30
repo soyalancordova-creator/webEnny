@@ -6,7 +6,7 @@
    NUNCA guarda datos de Supabase ni archivos de partituras: esos
    son privados y van siempre a la red.
 ============================================================ */
-const CACHE = 'hosannia-v2';
+const CACHE = 'hosannia-v3';
 const SHELL = [
   'campus.html', 'academia.html', 'manifest.webmanifest',
   'public/css/brand.css', 'public/css/hosannia.css', 'public/css/campus.css',

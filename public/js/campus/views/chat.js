@@ -4,7 +4,8 @@
    La burbuja flotante abre la bandeja (#/mensajes): junta los
    chats directos con hermanos y los grupos a los que perteneces.
    Cada conversación directa abre su propia pantalla (#/mensajes/:id).
-   El chat de un grupo sigue viviendo en #/grupo/:id/chat.
+   El chat de un grupo también vive aquí, no dentro del grupo:
+   #/mensajes/grupo/:id, con la misma pinta pero varios autores.
 ============================================================ */
 import { icon } from '../icons.js';
 import { $, $$, esc, richText, avatar, ago, clock, dayLabel, toast, lightbox, empty } from '../ui.js';
@@ -73,7 +74,7 @@ export async function renderMensajes(ctx, view) {
       linea: `${c.last.mine ? 'Tú: ' : ''}${c.last.body || 'Foto'}`, hora: c.last.created_at, no: c.unread,
     })),
     ...grupos.map((g) => ({
-      href: `#/grupo/${g.id}/chat`, avatar: `<span class="gthumb sm">${g.cover ? `<img src="${esc(g.cover)}" alt="">` : icon('comment')}</span>`,
+      href: `#/mensajes/grupo/${g.id}`, avatar: `<span class="gthumb sm">${g.cover ? `<img src="${esc(g.cover)}" alt="">` : icon('comment')}</span>`,
       nombre: g.name, linea: 'Grupo', hora: g.created_at, no: 0, esGrupo: true,
     })),
   ].sort((a, b) => new Date(b.hora) - new Date(a.hora));
@@ -156,6 +157,79 @@ export async function renderConversacion(ctx, view, [otroId]) {
   };
 
   const unsub = ctx.store.subscribeDirect(persona.id, (m) => { const v = list.querySelector('.chat-vacio'); if (v) v.remove(); pinta(m, false); });
+  ta.focus({ preventScroll: true });
+  return () => { if (unsub) unsub(); };
+}
+
+/* ---------- chat de un grupo, a pantalla completa (misma pinta, varios autores) ---------- */
+export async function renderMensajesGrupo(ctx, view, [groupId]) {
+  let g;
+  try { g = await ctx.store.getGroup(groupId); } catch (e) { empty(view, 'info', e.message); return; }
+  ctx.setTitle(g.name);
+
+  view.innerHTML = `<div class="msg">
+    <header class="msg-top">
+      <button class="cx-iconbtn" data-back aria-label="Volver a mensajes">${icon('back')}</button>
+      <a class="msg-who" href="#/grupo/${esc(g.id)}"><span class="gthumb sm">${g.cover ? `<img src="${esc(g.cover)}" alt="">` : icon('comment')}</span><b>${esc(g.name)}</b></a>
+      <span class="sp"></span>
+    </header>
+    <div class="ch-list" id="grList" aria-live="polite"></div>
+    <form class="ch-form" id="grF">
+      <label class="cx-iconbtn" aria-label="Enviar foto" style="cursor:pointer">${icon('image')}
+        <input type="file" accept="image/*" hidden id="grImg"></label>
+      <textarea id="grT" rows="1" maxlength="2000" placeholder="Escribe con gracia…" aria-label="Mensaje"></textarea>
+      <button class="cx-iconbtn ch-send" aria-label="Enviar">${icon('send')}</button>
+    </form>
+  </div>`;
+  $('[data-back]', view).onclick = () => ctx.go('#/mensajes');
+
+  const list = $('#grList', view), ta = $('#grT', view);
+  const vistos = new Set(); let ultimo = null;
+  const pegado = () => list.scrollHeight - list.scrollTop - list.clientHeight < 120;
+
+  const pinta = (m, bajar = true) => {
+    if (!m || vistos.has(m.id)) return; vistos.add(m.id);
+    const d = new Date(m.created_at);
+    if (!ultimo || new Date(ultimo.created_at).toDateString() !== d.toDateString()) {
+      const s = document.createElement('div'); s.className = 'ch-day'; s.textContent = dayLabel(m.created_at); list.appendChild(s); ultimo = null;
+    }
+    const junto = !ultimo || ultimo.author.id !== m.author.id || d - new Date(ultimo.created_at) > 5 * 60000;
+    const row = document.createElement('div');
+    row.className = `ch-msg${m.mine ? ' me' : ''}${junto ? ' grp' : ''}`;
+    row.innerHTML = `<a href="#/perfil/${esc(m.author.id)}">${avatar(m.author, 'sm')}</a>
+      <div class="bub"><a class="nm" href="#/perfil/${esc(m.author.id)}">${esc(m.author.name)}</a>
+        ${m.image ? `<img src="${esc(m.image)}" alt="Foto">` : ''}${m.body ? richText(m.body) : ''}<time>${clock(m.created_at)}</time></div>`;
+    const im = $('img', row); if (im) im.onclick = () => lightbox([m.image]);
+    const stick = pegado();
+    list.appendChild(row); ultimo = m;
+    if (bajar || stick) list.scrollTop = list.scrollHeight;
+  };
+
+  try {
+    const msgs = await ctx.store.listMessages(g.id);
+    msgs.forEach((m) => pinta(m, false));
+    list.scrollTop = list.scrollHeight;
+    if (!msgs.length) list.innerHTML = `<div class="chat-vacio"><p>Sé la primera persona en escribir en ${esc(g.name)}.</p></div>`;
+  } catch (e) { empty(list, 'lock', e.message); return; }
+
+  const enviar = async (payload) => {
+    const v = list.querySelector('.chat-vacio'); if (v) v.remove();
+    try { pinta(await ctx.store.sendMessage(g.id, payload)); } catch (err) { toast(err.message); }
+  };
+  $('#grF', view).onsubmit = (e) => {
+    e.preventDefault();
+    const v = ta.value.trim(); if (!v) return;
+    ta.value = ''; ta.style.height = ''; enviar({ body: v });
+  };
+  ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#grF', view).requestSubmit(); } });
+  ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
+  $('#grImg', view).onchange = async (e) => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try { const img = await compressImage(f, { maxSide: 1400, quality: 0.78 }); await enviar({ body: ta.value.trim(), image: img }); ta.value = ''; }
+    catch (err) { toast(err.message); }
+  };
+
+  const unsub = ctx.store.subscribeMessages(g.id, (m) => { const v = list.querySelector('.chat-vacio'); if (v) v.remove(); pinta(m, false); });
   ta.focus({ preventScroll: true });
   return () => { if (unsub) unsub(); };
 }
