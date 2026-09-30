@@ -262,6 +262,15 @@ await allow('Un integrante sí publica en el grupo', U.beto, () => q(`insert int
 await allow('Un integrante sí escribe en el chat del grupo', U.beto, () => q(`insert into public.community_messages (community_id, author_id, body) values ('${grupo}', '${U.beto}', 'llego 7pm')`));
 await deny('Quien no es integrante no escribe en el chat del grupo', U.caro, () => q(`insert into public.community_messages (community_id, author_id, body) values ('${grupo}', '${U.caro}', 'hola')`));
 
+/* ---------------- 13. chat directo entre hermanos ---------------- */
+await deny('Escribir a alguien sin conexión', U.caro, () => q(`insert into public.direct_messages (sender_id, receiver_id, body) values ('${U.caro}', '${U.enny}', 'hola')`));
+await allow('Escribir a un hermano conectado', U.ana, () => q(`insert into public.direct_messages (sender_id, receiver_id, body) values ('${U.ana}', '${U.beto}', 'la paz')`));
+await deny('Escribir a nombre de otra persona', U.caro, () => q(`insert into public.direct_messages (sender_id, receiver_id, body) values ('${U.ana}', '${U.beto}', 'suplantado')`));
+await expect('Quien recibe ve el mensaje', U.beto, () => q(`select body from public.direct_messages`), (r) => r.length === 1 && r[0].body === 'la paz');
+await expect('Un tercero no ve la conversación ajena', U.caro, () => q(`select * from public.direct_messages`), (r) => r.length === 0);
+await allow('Quien recibe lo marca como leído', U.beto, () => mustAffect(`update public.direct_messages set read_at = now() where receiver_id = '${U.beto}'`));
+await deny('Un tercero no marca como leído lo ajeno', U.caro, () => mustAffect(`update public.direct_messages set read_at = now()`));
+
 /* ---------------- resultado ---------------- */
 results.forEach(([s, n]) => console.log(`${s} ${n}`));
 console.log(`\n${pass} pruebas pasaron · ${failed} fallaron`);

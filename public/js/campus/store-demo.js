@@ -119,7 +119,14 @@ function seed() {
     { id: 'st3', author: 'u-daniela', text: 'Primera vez tocando en el coro juvenil 🙌', image: 'public/img/enny-concierto.jpg', created_at: ago(320) },
     { id: 'st4', author: 'u-sara', text: '15 minutos de escalas antes de empezar el día.', image: '', created_at: ago(500) },
   ];
-  return { users, groups, members, posts, reactions, comments, saves: [], messages, collections, scores, favorites: [], notifications, reads: [], subscriptions, reports: [], follows, stories, story_views: [] };
+  const dm = (a, b, body, min) => ({ id: uid(), sender: a, receiver: b, body, image: null, read_at: null, created_at: ago(min) });
+  const directs = [
+    dm('u-enny', 'u-demo', 'Qué bueno verte por aquí. ¿Cómo va la práctica?', 180),
+    dm('u-demo', 'u-enny', 'Avanzando 🙏 Estrellita ya me sale limpia.', 172),
+    dm('u-enny', 'u-demo', 'Excelente. Pasa a Sublime gracia cuando quieras.', 170),
+    dm('u-daniela', 'u-demo', 'Hermano, ¿ensayamos el domingo temprano?', 60),
+  ];
+  return { users, groups, members, posts, reactions, comments, saves: [], messages, collections, scores, favorites: [], notifications, reads: [], subscriptions, reports: [], follows, stories, story_views: [], directs };
 }
 
 /* ---------- persistencia ---------- */
@@ -138,7 +145,8 @@ export function createDemoStore() {
   let db = load();
   // los datos viejos del navegador no traen historias ni conexiones
   if (!db.follows) { db.follows = []; db.stories = []; db.story_views = []; }
-  const listeners = { msg: new Map(), notif: new Set() };
+  if (!db.directs) db.directs = [];
+  const listeners = { msg: new Map(), dm: new Map(), notif: new Set() };
   const commit = () => save(db);
   const meId = () => localStorage.getItem(SESSION);
   const user = (id) => db.users.find((u) => u.id === id);
@@ -471,6 +479,52 @@ export function createDemoStore() {
       if (!listeners.msg.has(groupId)) listeners.msg.set(groupId, new Set());
       listeners.msg.get(groupId).add(cb);
       return () => listeners.msg.get(groupId).delete(cb);
+    },
+
+    /* ---------- chat directo (burbuja) ---------- */
+    async listChats() {
+      const me = need();
+      const mios = db.directs.filter((m) => m.sender === me || m.receiver === me);
+      const porOtro = new Map();
+      mios.sort((a, b) => a.created_at.localeCompare(b.created_at)).forEach((m) => {
+        porOtro.set(m.sender === me ? m.receiver : m.sender, m);
+      });
+      return [...porOtro.entries()].map(([otro, ultimo]) => ({
+        user: pub(user(otro)),
+        last: { body: ultimo.body, image: ultimo.image, created_at: ultimo.created_at, mine: ultimo.sender === me },
+        unread: mios.filter((m) => m.sender === otro && !m.read_at).length,
+      })).sort((a, b) => b.last.created_at.localeCompare(a.last.created_at));
+    },
+    async chatUnread() {
+      const me = meId(); if (!me) return 0;
+      return db.directs.filter((m) => m.receiver === me && !m.read_at).length;
+    },
+    async listDirect(otroId) {
+      const me = need();
+      const list = db.directs
+        .filter((m) => (m.sender === me && m.receiver === otroId) || (m.sender === otroId && m.receiver === me))
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+      let cambio = false;
+      list.forEach((m) => { if (m.receiver === me && !m.read_at) { m.read_at = now(); cambio = true; } });
+      if (cambio) commit();
+      return list.map((m) => ({ id: m.id, body: m.body, image: m.image, created_at: m.created_at, mine: m.sender === me, author: pub(user(m.sender)) }));
+    },
+    async sendDirect(otroId, { body = '', image = null }) {
+      const me = need();
+      const hay = db.follows.some((f) => (f.follower === me && f.target === otroId) || (f.follower === otroId && f.target === me));
+      if (!hay) throw new Error('Solo puedes escribir a hermanos con los que estás conectado.');
+      body = String(body).trim().slice(0, 2000);
+      if (!body && !image) return null;
+      const m = { id: uid(), sender: me, receiver: otroId, body, image: image ? (await saveImage(image)).url : null, read_at: null, created_at: now() };
+      db.directs.push(m); commit();
+      const out = { id: m.id, body: m.body, image: m.image, created_at: m.created_at, mine: true, author: pub(user(me)) };
+      (listeners.dm.get(otroId) || new Set()).forEach((cb) => cb(out));
+      return out;
+    },
+    subscribeDirect(otroId, cb) {
+      if (!listeners.dm.has(otroId)) listeners.dm.set(otroId, new Set());
+      listeners.dm.get(otroId).add(cb);
+      return () => listeners.dm.get(otroId).delete(cb);
     },
 
     /* ---------- notificaciones ---------- */

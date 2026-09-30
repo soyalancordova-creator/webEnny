@@ -814,3 +814,75 @@ html[data-theme="dark"] .cx-toplogo .lg-dark{display:block}
 .srch-sec{margin-bottom:1.6rem}
 .srch-sec h3{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.6rem;font-weight:500}
 .srch-empty{text-align:center;padding:2.4rem 1rem}
+
+/* ============================================================
+   HOSANNIA · chat directo (burbuja flotante)
+============================================================ */
+.chat-fab{position:fixed;right:1rem;z-index:75;width:56px;height:56px;border-radius:50%;
+  bottom:calc(6.2rem + env(safe-area-inset-bottom));
+  display:grid;place-items:center;border:0;cursor:pointer;color:#fff;
+  background:linear-gradient(140deg,var(--red-2),var(--red));
+  box-shadow:0 14px 30px -10px rgba(176,25,46,.75);
+  transition:transform .35s var(--ez),box-shadow .35s var(--ez)}
+.chat-fab:hover{transform:translateY(-2px) scale(1.04)}
+.chat-fab:active{transform:scale(.93)}
+.chat-fab .ic{width:24px;height:24px;stroke-width:1.9}
+.chat-fab .badge{position:absolute;top:-2px;right:-2px;min-width:22px;height:22px;padding:0 6px;border-radius:99px;
+  display:grid;place-items:center;font-size:.68rem;font-weight:600;background:var(--gold-2);color:var(--navy);
+  border:2px solid var(--bg-deep)}
+.chat-fab.abierto{background:var(--navy-2)}
+body.hide-bars .chat-fab{transform:translateY(calc(100% + 2rem))}
+@media (min-width:901px){
+  .chat-fab{bottom:1.4rem}
+  body.hide-bars .chat-fab{transform:none}
+}
+
+.chat-panel{position:fixed;z-index:80;display:flex;flex-direction:column;overflow:hidden;
+  right:1rem;bottom:calc(6.2rem + 56px + .6rem + env(safe-area-inset-bottom));
+  width:min(380px,calc(100vw - 2rem));height:min(64svh,540px);border-radius:24px;
+  background:var(--panel);border:1px solid var(--glass-brd);
+  box-shadow:0 30px 70px -20px rgba(13,19,33,.55);
+  backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%)}
+@media (min-width:901px){ .chat-panel{bottom:calc(1.4rem + 56px + .6rem)} }
+@media (max-width:520px){
+  .chat-panel{left:.7rem;right:.7rem;width:auto;height:min(72svh,620px);
+    bottom:calc(6.2rem + 56px + .5rem + env(safe-area-inset-bottom))}
+}
+.chat-panel header{display:flex;align-items:center;gap:.6rem;padding:.7rem .8rem;border-bottom:1px solid var(--hair)}
+.chat-panel header b{flex:1;min-width:0;font-size:.95rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+
+.chat-list{flex:1;overflow-y:auto;padding:.4rem}
+.ch-row{display:flex;align-items:center;gap:.7rem;width:100%;padding:.6rem;border:0;border-radius:15px;
+  background:none;cursor:pointer;text-align:left;color:var(--ink);transition:background .25s}
+.ch-row:hover{background:var(--bg-deep)}
+.ch-row .tx{flex:1;min-width:0}
+.ch-row .tx b{display:block;font-size:.89rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-row .tx small{display:block;color:var(--ink-3);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-row.un .tx b{font-weight:600}
+.ch-row.un .tx small{color:var(--ink-2)}
+.ch-row .mt{display:grid;justify-items:end;gap:.25rem;flex:none}
+.ch-row .mt time{font-size:.68rem;color:var(--ink-3)}
+.ch-row .mt .badge{min-width:19px;height:19px;padding:0 5px;border-radius:99px;display:grid;place-items:center;
+  font-size:.65rem;font-weight:600;background:var(--wine);color:#fff}
+
+.chat-vacio{flex:1;display:grid;place-content:center;justify-items:center;gap:.3rem;padding:2rem 1.4rem;text-align:center}
+.chat-vacio .ic{width:32px;height:32px;color:var(--ink-3);margin-bottom:.4rem}
+.chat-vacio p{color:var(--ink-2);font-size:.92rem}
+.chat-vacio small{color:var(--ink-3);font-size:.8rem}
+
+/* el hilo reusa .ch-list / .ch-msg del chat de grupos, ajustado al panel */
+.chat-body .ch-list{flex:1;min-height:0;overflow-y:auto;padding:.7rem;display:flex;flex-direction:column;gap:.2rem}
+.chat-body .ch-msg{display:flex;gap:.5rem;max-width:84%}
+.chat-body .ch-msg.me{align-self:flex-end;flex-direction:row-reverse}
+.chat-body .ch-msg .bub{padding:.5rem .75rem;border-radius:16px;background:var(--bg-deep);border:1px solid var(--hair);
+  font-size:.9rem;line-height:1.45;position:relative}
+.chat-body .ch-msg.me .bub{background:color-mix(in srgb,var(--wine) 16%,transparent);border-color:color-mix(in srgb,var(--wine) 28%,transparent)}
+.chat-body .ch-msg .bub img{max-width:190px;border-radius:11px;display:block;margin-bottom:.3rem;cursor:zoom-in}
+.chat-body .ch-msg .bub time{display:block;font-size:.62rem;color:var(--ink-3);margin-top:.2rem;text-align:right}
+.chat-body .ch-day{align-self:center;font-size:.68rem;color:var(--ink-3);padding:.3rem .7rem;margin:.4rem 0;
+  border-radius:99px;background:var(--bg-deep)}
+.chat-body .ch-form{display:flex;align-items:flex-end;gap:.4rem;padding:.6rem;border-top:1px solid var(--hair)}
+.chat-body .ch-form textarea{flex:1;min-width:0;resize:none;padding:.55rem .8rem;border-radius:16px;
+  border:1px solid var(--hair);background:var(--bg);color:var(--ink);font:inherit;font-size:.9rem;max-height:120px}
+.chat-body .ch-send{background:var(--wine);color:#fff;border-color:transparent}

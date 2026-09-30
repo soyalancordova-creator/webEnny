@@ -25,7 +25,8 @@ export async function renderProfile(ctx, view, [id]) {
       </div>
       <div class="pf-acts">
         ${p.isMe ? `<a class="btn btn-ghost btn-sm" href="#/editar-perfil"><span>${icon('edit')} Editar perfil</span></a>`
-          : `<button class="btn ${p.iFollow ? 'btn-ghost' : 'btn-fill'} btn-sm" id="fw"><span>${p.iFollow ? icon('check') + ' Hermanos en Cristo' : icon('hands') + ' ' + conectarTxt(p)}</span></button>`}
+          : `${p.iFollow ? `<button class="btn btn-fill btn-sm" id="msg"><span>${icon('comment')} Mensaje</span></button>` : ''}
+             <button class="btn ${p.iFollow ? 'btn-ghost' : 'btn-fill'} btn-sm" id="fw"><span>${p.iFollow ? icon('check') + ' Hermanos en Cristo' : icon('hands') + ' ' + conectarTxt(p)}</span></button>`}
       </div>
     </div>
     <div class="pf-grid">
@@ -46,6 +47,12 @@ export async function renderProfile(ctx, view, [id]) {
       </aside>
       <div class="fd-col" id="pList"></div>
     </div></div>`;
+
+  const msg = $('#msg', view);
+  if (msg) msg.onclick = async () => {
+    const { abrirChat } = await import('./chat.js');
+    abrirChat(ctx, { id: p.id, name: p.name, avatar: p.avatar });
+  };
 
   const fw = $('#fw', view);
   if (fw) fw.onclick = async () => {

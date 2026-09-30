@@ -413,6 +413,71 @@ export function createSupaStore(sb, cfg = {}) {
       return () => sb.removeChannel(ch);
     },
 
+    /* ---------- chat directo (burbuja) ---------- */
+    async listChats() {
+      const me = await uid();
+      const rows = await q(sb.from('direct_messages').select('*').or('sender_id.eq.' + me + ',receiver_id.eq.' + me)
+        .order('created_at', { ascending: false }).limit(300));
+      const porOtro = new Map();
+      rows.forEach((m) => {
+        const otro = m.sender_id === me ? m.receiver_id : m.sender_id;
+        if (!porOtro.has(otro)) porOtro.set(otro, { last: m, unread: 0 });
+        if (m.receiver_id === me && !m.read_at) porOtro.get(otro).unread++;
+      });
+      const ids = [...porOtro.keys()];
+      if (!ids.length) return [];
+      const ppl = await people(ids);
+      return ids.map((id) => {
+        const info = porOtro.get(id);
+        return { user: ppl[id], unread: info.unread,
+          last: { body: info.last.body, image: info.last.image_path, created_at: info.last.created_at, mine: info.last.sender_id === me } };
+      }).sort((a, b) => b.last.created_at.localeCompare(a.last.created_at));
+    },
+    async chatUnread() {
+      const me = await uid();
+      const { count } = await sb.from('direct_messages').select('id', { count: 'exact', head: true }).eq('receiver_id', me).is('read_at', null);
+      return count || 0;
+    },
+    async listDirect(otroId) {
+      const me = await uid();
+      const rows = await q(sb.from('direct_messages').select('*')
+        .or('and(sender_id.eq.' + me + ',receiver_id.eq.' + otroId + '),and(sender_id.eq.' + otroId + ',receiver_id.eq.' + me + ')')
+        .order('created_at').limit(200));
+      if (rows.some((m) => m.receiver_id === me && !m.read_at)) {
+        await sb.from('direct_messages').update({ read_at: new Date().toISOString() })
+          .eq('receiver_id', me).eq('sender_id', otroId).is('read_at', null);
+      }
+      const ppl = await people([me, otroId]);
+      const urls = await signed('dm', rows.map((m) => m.image_path).filter(Boolean));
+      return rows.map((m) => ({ id: m.id, body: m.body, image: m.image_path ? urls[m.image_path] || '' : null,
+        created_at: m.created_at, mine: m.sender_id === me, author: ppl[m.sender_id] }));
+    },
+    async sendDirect(otroId, { body = '', image = null }) {
+      const me = await uid();
+      body = String(body).trim().slice(0, 2000);
+      if (!body && !image) return null;
+      let path = null;
+      if (image) { path = me + '/' + Date.now() + '.' + ext(image.type); await upload('dm', path, image.blob); }
+      const m = await q(sb.from('direct_messages').insert({ sender_id: me, receiver_id: otroId, body, image_path: path }).select().single(),
+        'Solo puedes escribir a hermanos con los que estás conectado.');
+      const urls = path ? await signed('dm', [path]) : {};
+      const ppl = await people([me]);
+      return { id: m.id, body: m.body, image: path ? urls[path] || '' : null, created_at: m.created_at, mine: true, author: ppl[me] };
+    },
+    subscribeDirect(otroId, cb) {
+      let vivo = true;
+      const ch = sb.channel('dm-' + otroId + '-' + Date.now())
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: 'sender_id=eq.' + otroId }, async (p) => {
+          if (!vivo) return;
+          const m = p.new; const me = await uid();
+          if (m.receiver_id !== me) return;
+          const ppl = await people([otroId]);
+          const urls = m.image_path ? await signed('dm', [m.image_path]) : {};
+          cb({ id: m.id, body: m.body, image: m.image_path ? urls[m.image_path] || '' : null, created_at: m.created_at, mine: false, author: ppl[otroId] });
+        }).subscribe();
+      return () => { vivo = false; sb.removeChannel(ch); };
+    },
+
     /* ---------- notificaciones ---------- */
     async listNotifications() {
       const me = await uid();

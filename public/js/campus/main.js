@@ -231,6 +231,7 @@ async function boot() {
   if (!me) { location.replace('academia.html?next=campus.html'); return; }
   document.title = APP;
   paintShell(); bindTop(); installer.watch(); bindScrollBars();
+  import('./views/chat.js').then((m) => m.montarBurbuja(ctx)).catch(() => {});
   if (store.onNotify) unsubNotif = store.onNotify(() => refreshBadges());
   unreadTimer = setInterval(refreshBadges, 60000);
   window.addEventListener('hashchange', route);

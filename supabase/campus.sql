@@ -753,3 +753,75 @@ language sql security definer set search_path = public as $$
   select count(*)::int from gone;
 $$;
 revoke execute on function public.purge_stories() from anon, authenticated;
+
+-- ------------------------------------------------------------
+-- 12. CHAT DIRECTO (el botón burbuja)
+--     Solo entre hermanos conectados: uno de los dos debe seguir al otro.
+-- ------------------------------------------------------------
+create table if not exists public.direct_messages (
+  id          uuid primary key default gen_random_uuid(),
+  sender_id   uuid not null references auth.users(id) on delete cascade,
+  receiver_id uuid not null references auth.users(id) on delete cascade,
+  body        text not null default '' check (char_length(body) <= 2000),
+  image_path  text,
+  read_at     timestamptz,
+  created_at  timestamptz not null default now(),
+  check (sender_id <> receiver_id),
+  check (char_length(body) > 0 or image_path is not null)
+);
+create index if not exists dm_pair_idx on public.direct_messages (sender_id, receiver_id, created_at desc);
+create index if not exists dm_inbox_idx on public.direct_messages (receiver_id, read_at);
+alter table public.direct_messages enable row level security;
+
+-- ¿hay conexión entre estas dos personas? (en cualquier dirección)
+create or replace function public.conectados(a uuid, b uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.follows f
+                 where (f.follower_id = a and f.target_id = b)
+                    or (f.follower_id = b and f.target_id = a));
+$$;
+revoke execute on function public.conectados(uuid, uuid) from anon;
+grant  execute on function public.conectados(uuid, uuid) to authenticated;
+
+drop policy if exists "dm: ver"      on public.direct_messages;
+drop policy if exists "dm: escribir" on public.direct_messages;
+drop policy if exists "dm: leido"    on public.direct_messages;
+drop policy if exists "dm: borrar"   on public.direct_messages;
+-- cada quien ve solo sus propias conversaciones
+create policy "dm: ver" on public.direct_messages for select to authenticated
+  using (sender_id = auth.uid() or receiver_id = auth.uid());
+-- solo se escribe a nombre propio y solo a alguien con quien hay conexión
+create policy "dm: escribir" on public.direct_messages for insert to authenticated
+  with check (sender_id = auth.uid() and public.conectados(auth.uid(), receiver_id));
+-- marcar como leído: solo quien recibe, y solo esa columna cambia de hecho
+create policy "dm: leido" on public.direct_messages for update to authenticated
+  using (receiver_id = auth.uid()) with check (receiver_id = auth.uid());
+create policy "dm: borrar" on public.direct_messages for delete to authenticated
+  using (sender_id = auth.uid() or public.is_admin());
+
+-- 20 mensajes directos por minuto
+drop trigger if exists rl_dm on public.direct_messages;
+create trigger rl_dm before insert on public.direct_messages for each row execute function public.rate_limit('20', 'sender_id');
+
+-- fotos del chat directo: privadas, cada quien escribe bajo su uid
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
+  ('dm', 'dm', false, 5242880, array['image/webp','image/jpeg','image/png'])
+on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "dm: subir" on storage.objects;
+drop policy if exists "dm: mirar" on storage.objects;
+create policy "dm: subir" on storage.objects for insert to authenticated
+  with check (bucket_id = 'dm' and public.storage_path_owner(name) = auth.uid());
+create policy "dm: mirar" on storage.objects for select to authenticated using (
+  bucket_id = 'dm' and exists (
+    select 1 from public.direct_messages m
+    where m.image_path = name and (m.sender_id = auth.uid() or m.receiver_id = auth.uid())));
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'direct_messages') then
+      alter publication supabase_realtime add table public.direct_messages;
+    end if;
+  end if;
+end $$;
