@@ -25,8 +25,11 @@ window.ENNY = {
   SUPABASE_ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjbGp3Y3RubHFnemdjd2Jjb2Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NDEwOTksImV4cCI6MjEwNjMxNzA5OX0.xa7yHaTgcH_w7FYnQQXpflY6wM_gwikzFj6ktA_hJIs',
 
   // Modo demostración: 'auto' = se activa solo si Supabase no está configurado.
-  // true = forzarlo aunque haya Supabase (para mostrar la plataforma sin datos reales).
-  DEMO_MODE: 'auto',
+  // true = forzarlo aunque haya Supabase.
+  // FORZADO A true: Supabase ya está conectado, pero el correo real de registro
+  // (código de 6 dígitos) todavía no funciona sin SMTP propio — ver CLAUDE.md.
+  // Vuelve a 'auto' en cuanto se configure el correo.
+  DEMO_MODE: true,
 
   // PayPal → developer.paypal.com → Apps & Credentials → Client ID (público)
   PAYPAL_CLIENT_ID: 'BAAoMXfjgI_-Z2GtCVIY7xKZWy5Vd9sQEI7cB0dGdWPLpzHYzs2-mbgX07D7ZcO02YkHTlOoufinCEdzC4',
