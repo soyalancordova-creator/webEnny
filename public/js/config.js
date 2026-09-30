@@ -21,17 +21,17 @@ window.ENNY = {
   SOPORTE_EMAIL: 'ennytorov@gmail.com',
 
   // Supabase → Project Settings → API
-  SUPABASE_URL:  'PEGA_AQUI_TU_PROJECT_URL',
-  SUPABASE_ANON: 'PEGA_AQUI_TU_ANON_KEY',
+  SUPABASE_URL:  'https://scljwctnlqgzgcwbcofv.supabase.co',
+  SUPABASE_ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjbGp3Y3RubHFnemdjd2Jjb2Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NDEwOTksImV4cCI6MjEwNjMxNzA5OX0.xa7yHaTgcH_w7FYnQQXpflY6wM_gwikzFj6ktA_hJIs',
 
   // Modo demostración: 'auto' = se activa solo si Supabase no está configurado.
   // true = forzarlo aunque haya Supabase (para mostrar la plataforma sin datos reales).
   DEMO_MODE: 'auto',
 
   // PayPal → developer.paypal.com → Apps & Credentials → Client ID (público)
-  PAYPAL_CLIENT_ID: '',
+  PAYPAL_CLIENT_ID: 'BAAoMXfjgI_-Z2GtCVIY7xKZWy5Vd9sQEI7cB0dGdWPLpzHYzs2-mbgX07D7ZcO02YkHTlOoufinCEdzC4',
   // IDs de los 3 planes creados en PayPal (Billing → Subscriptions → Plans)
-  PAYPAL_PLANS: { mensual: '', trimestral: '', anual: '' },
+  PAYPAL_PLANS: { mensual: 'P-8DX54050UA925603XNK6KCVA', trimestral: 'P-2BR79167E1270072ANK6KCVA', anual: 'P-23X28049FH291053CNK6KCVI' },
 
   // Calendly → tu enlace público, ej: https://calendly.com/enny-toro/clase
   CALENDLY: '',

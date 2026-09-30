@@ -707,6 +707,7 @@ create policy "stv: marcar" on public.story_views for insert to authenticated wi
   user_id = auth.uid() and exists (select 1 from public.stories s where s.id = story_id and public.can_see_story(s.author_id, s.created_at)));
 
 -- máximo 10 historias por minuto
+drop trigger if exists rl_stories on public.stories;
 create trigger rl_stories before insert on public.stories for each row execute function public.rate_limit('10', 'author_id');
 
 -- fotos de historias: privadas, cada quien escribe bajo su uid
