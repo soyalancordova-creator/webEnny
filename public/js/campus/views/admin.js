@@ -9,7 +9,7 @@ import { $, $$, esc, ago, avatar, toast, modal, confirmBox, loading, empty, fmtT
 import { ScoreEngine, youtubeId } from '../score-engine.js';
 import { compressImage } from '../media.js';
 
-const TABS = [['', 'Resumen', 'feed'], ['partituras', 'Partituras', 'music'], ['banner', 'Banner', 'image'], ['colecciones', 'Colecciones', 'book'], ['avisos', 'Avisos', 'megaphone'], ['moderacion', 'Moderación', 'flag'], ['alumnos', 'Alumnos', 'users']];
+const TABS = [['', 'Resumen', 'feed'], ['partituras', 'Partituras', 'music'], ['banner', 'Banner', 'image'], ['promos', 'Promos', 'crown'], ['colecciones', 'Colecciones', 'book'], ['avisos', 'Avisos', 'megaphone'], ['moderacion', 'Moderación', 'flag'], ['alumnos', 'Alumnos', 'users']];
 
 export async function renderAdmin(ctx, view, [tab = '', sub]) {
   ctx.setTitle('Panel de Hosannia');
@@ -22,6 +22,7 @@ export async function renderAdmin(ctx, view, [tab = '', sub]) {
   const el = $('#ab', view);
   if (tab === 'partituras') return sub ? scoreEditor(ctx, el, sub) : scoresTab(ctx, el);
   if (tab === 'banner') return bannerTab(ctx, el);
+  if (tab === 'promos') return promosTab(ctx, el);
   if (tab === 'colecciones') return collectionsTab(ctx, el);
   if (tab === 'avisos') return broadcastTab(ctx, el);
   if (tab === 'moderacion') return moderationTab(ctx, el);
@@ -73,6 +74,75 @@ async function bannerTab(ctx, el) {
     if (!(await confirmBox('¿Quitar el banner de la biblioteca?', 'Quitar'))) return;
     try { await ctx.store.setContent('library_banner', {}); toast('Banner quitado.'); bannerTab(ctx, el); } catch (e) { toast(e.message); }
   };
+}
+
+/* ---------- promociones rotativas de la biblioteca (como anuncios internos) ---------- */
+const PROMO_PLACEMENTS = [['top', 'Arriba de la biblioteca'], ['middle', 'Entre álbumes y artistas'], ['explorar', 'Pantalla Explorar']];
+
+async function promosTab(ctx, el) {
+  loading(el);
+  let list = [];
+  try { list = await ctx.store.getContent('library_promos'); } catch (_) {}
+  if (!Array.isArray(list)) list = [];
+  const row = (p) => `<div class="cx-card cx-pad" style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:.8rem">
+    <span class="gthumb" style="width:40px;height:40px;flex-shrink:0;overflow:hidden">${p.image ? `<img src="${esc(p.image)}" alt="" style="width:100%;height:100%;object-fit:cover">` : icon('crown')}</span>
+    <div style="flex:1;min-width:0"><b>${esc(p.title)}</b><p class="muted" style="font-size:.84rem;margin:.2rem 0">${esc(p.subtitle || '')}</p>
+      <p class="muted" style="font-size:.76rem">${esc((PROMO_PLACEMENTS.find((x) => x[0] === (p.placement || 'top')) || [])[1] || '')} · Botón: "${esc(p.cta || 'Ver planes')}" → ${esc(p.link || '#/ajustes/suscripcion')}</p></div>
+    <div class="cx-row"><button class="btn btn-ghost btn-sm" data-edit="${esc(p.id)}"><span>${icon('edit')}</span></button>
+      <button class="btn btn-ghost btn-sm" data-del="${esc(p.id)}"><span>${icon('trash')}</span></button></div></div>`;
+  el.innerHTML = `<section class="cx-pad" style="padding:0">
+    <div class="cx-h" style="margin-bottom:1rem"><div><h3 style="margin:0">${icon('crown')} Promos (anuncios)</h3>
+      <p class="muted">Lo que ven, mientras no tienen suscripción, quienes usan la Biblioteca y Explorar. Puedes poner una foto o dejarlo solo con texto; si agregas varias para el mismo lugar, en cada visita se muestra una al azar entre las que no se han cerrado en esa sesión.</p></div>
+      <button class="btn btn-fill btn-sm" id="pAdd"><span>${icon('plus')} Agregar promo</span></button></div>
+    ${list.length ? list.map(row).join('') : '<p class="muted">Sin promos propias todavía: arriba de la biblioteca se muestra el anuncio de suscripción por defecto.</p>'}
+  </section>`;
+  const save = async (next) => { await ctx.store.setContent('library_promos', next); toast('Guardado.'); promosTab(ctx, el); };
+  const form = (p) => {
+    const draft = { id: (p && p.id) || `promo-${Date.now()}`, title: (p && p.title) || '', subtitle: (p && p.subtitle) || '', cta: (p && p.cta) || 'Ver planes', link: (p && p.link) || '#/ajustes/suscripcion', image: (p && p.image) || '', placement: (p && p.placement) || 'top' };
+    let img = null;
+    const m = modal({ title: p ? 'Editar promo' : 'Nueva promo', wide: true, body: `<div class="flt">
+      <label class="st-drop" id="pDrop" style="min-height:120px">
+        <input type="file" accept="image/*" hidden id="pFile">
+        <div class="ph" id="pPh"${draft.image ? ' hidden' : ''}>${icon('image')}<b>Foto (opcional)</b><small>Si no eliges una, el anuncio se ve solo con texto</small></div>
+        <img id="pPrev"${draft.image ? ` src="${esc(draft.image)}"` : ' hidden'} alt="">
+      </label>
+      <div class="fld" style="margin-top:.9rem"><label>Dónde aparece</label><select id="pPlace">${PROMO_PLACEMENTS.map(([v, l]) => `<option value="${v}"${draft.placement === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      <div class="fld"><label>Título</label><input id="pT" maxlength="70" value="${esc(draft.title)}" placeholder="Tu adoración, sin límites."></div>
+      <div class="fld"><label>Subtítulo</label><input id="pS" maxlength="140" value="${esc(draft.subtitle)}" placeholder="Desbloquea toda la biblioteca..."></div>
+      <div class="two"><div class="fld"><label>Texto del botón</label><input id="pC" maxlength="30" value="${esc(draft.cta)}"></div>
+        <div class="fld"><label>Enlace del botón</label><input id="pL" maxlength="200" value="${esc(draft.link)}"></div></div>
+      <div class="cx-row" style="justify-content:space-between;margin-top:1.2rem">
+        ${draft.image ? `<button type="button" class="btn btn-ghost btn-sm" id="pRmImg"><span>${icon('trash')} Quitar foto</span></button>` : '<span></span>'}
+        <button class="btn btn-fill btn-sm" id="pSave"><span>Guardar</span></button></div></div>` });
+    const file = $('#pFile', m.body);
+    $('#pDrop', m.body).onclick = (e) => { if (e.target !== file) file.click(); };
+    file.onchange = async () => {
+      const f = file.files[0]; if (!f) return;
+      try {
+        img = await compressImage(f, { maxSide: 1400, quality: 0.82 });
+        const prev = $('#pPrev', m.body); prev.src = URL.createObjectURL(img.blob); prev.hidden = false; $('#pPh', m.body).hidden = true;
+      } catch (err) { toast(err.message); }
+    };
+    const rm = $('#pRmImg', m.body); if (rm) rm.onclick = () => { img = 'remove'; draft.image = ''; $('#pPrev', m.body).hidden = true; $('#pPh', m.body).hidden = false; rm.remove(); };
+    $('#pSave', m.body).onclick = async () => {
+      const title = $('#pT', m.body).value.trim(); if (!title) { toast('Escribe un título.'); return; }
+      try {
+        const image = img && img !== 'remove' ? await ctx.store.uploadPromoImage(img, draft.id) : (img === 'remove' ? '' : draft.image);
+        const next = { ...draft, title, image, placement: $('#pPlace', m.body).value, subtitle: $('#pS', m.body).value.trim(), cta: $('#pC', m.body).value.trim() || 'Ver planes', link: $('#pL', m.body).value.trim() || '#/ajustes/suscripcion' };
+        const exists = list.some((x) => x.id === next.id);
+        const updated = exists ? list.map((x) => (x.id === next.id ? next : x)) : [...list, next];
+        m.close(); await save(updated);
+      } catch (err) { toast(err.message); }
+    };
+  };
+  $('#pAdd', el).onclick = () => form(null);
+  $$('[data-edit]', el).forEach((b) => { b.onclick = () => form(list.find((p) => p.id === b.dataset.edit)); });
+  $$('[data-del]', el).forEach((b) => {
+    b.onclick = async () => {
+      if (!(await confirmBox('¿Quitar esta promo?', 'Quitar'))) return;
+      await save(list.filter((p) => p.id !== b.dataset.del));
+    };
+  });
 }
 
 async function overview(ctx, el) {

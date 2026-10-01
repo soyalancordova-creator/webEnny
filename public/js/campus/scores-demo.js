@@ -205,6 +205,5 @@ const SPECS = {
 };
 
 export function demoXml(id) {
-  const s = SPECS[id];
-  return s ? buildScore(s) : null;
+  return buildScore(SPECS[id] || estrellita);
 }

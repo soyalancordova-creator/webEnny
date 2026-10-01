@@ -6,6 +6,8 @@
    traduce el error a un mensaje humano.
 ============================================================ */
 
+import { demoXml } from './scores-demo.js';
+
 const TTL = 3600; // segundos de validez de URLs firmadas
 
 export function createSupaStore(sb, cfg = {}) {
@@ -511,6 +513,11 @@ export function createSupaStore(sb, cfg = {}) {
       await upload('community', path, img.blob);
       return sb.storage.from('community').getPublicUrl(path).data.publicUrl + '?v=' + Date.now();
     },
+    async uploadPromoImage(img, key) {
+      const path = `banners/promo-${key}.${ext(img.type)}`;
+      await upload('community', path, img.blob);
+      return sb.storage.from('community').getPublicUrl(path).data.publicUrl + '?v=' + Date.now();
+    },
     async setContent(key, value) {
       await q(sb.from('site_content').upsert({ key, data: value, updated_at: new Date().toISOString() }), 'Solo un administrador puede editar esto.');
       return value;
@@ -537,7 +544,12 @@ export function createSupaStore(sb, cfg = {}) {
       const s = await q(sb.from('scores').select('*').eq('id', id).maybeSingle());
       if (!s) throw new Error('Obra no disponible.');
       const a = await q(sb.from('score_assets').select('*').eq('score_id', id).maybeSingle());
-      if (!a) { if (!s.free && !me.hasAccess) { const e = new Error('Necesitas una suscripción activa para abrir esta obra.'); e.code = 'PAYWALL'; throw e; } throw new Error('Esta obra aún no tiene archivo MusicXML.'); }
+      if (!a) {
+        // sin archivo propio todavía: se abre con un arreglo de muestra hasta que un administrador suba el real
+        if (!s.free && !me.hasAccess) { const e = new Error('Necesitas una suscripción activa para abrir esta obra.'); e.code = 'PAYWALL'; throw e; }
+        const fav = await q(sb.from('score_favorites').select('score_id').eq('user_id', me.id).eq('score_id', id).maybeSingle());
+        return { ...s, collection: s.collection_id, xml: demoXml(id), placeholder: true, pdf_url: '', media_url: '', sync: null, favorite: !!fav };
+      }
       const paths = [a.xml_path, a.pdf_path];
       const media = a.media_url && !/^https?:/.test(a.media_url) ? a.media_url : null;
       const [u1, u2] = await Promise.all([signed('scores', paths), media ? signed('score-media', [media]) : {}]);

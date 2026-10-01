@@ -28,6 +28,7 @@ let me = null, cleanup = null, unreadTimer = null, unsubNotif = null;
 const ROUTES = [
   { re: /^#\/?$/, view: 'library', nav: 'biblioteca' },
   { re: /^#\/biblioteca(?:\?(.*))?$/, view: 'library', nav: 'biblioteca' },
+  { re: /^#\/explorar(?:\?(.*))?$/, view: 'explore', nav: 'explorar' },
   { re: /^#\/obra\/([\w-]+)$/, view: 'player', nav: 'biblioteca', full: true },
   { re: /^#\/favoritos$/, view: 'favorites', nav: 'favoritos' },
   { re: /^#\/comunidad$/, view: 'feed', nav: 'comunidad' },
@@ -49,11 +50,12 @@ const ROUTES = [
   { re: /^#\/mensajes\/([\w-]+)$/, view: 'conversacion', nav: '', full: true, limpio: true },
   { re: /^#\/mensajes$/, view: 'mensajes', nav: '', full: true, limpio: true },
   { re: /^#\/grupos$/, view: 'grupos', nav: 'grupos' },
-  { re: /^#\/admin(?:\/(partituras|colecciones|avisos|moderacion|alumnos))?(?:\/([\w-]+))?$/, view: 'admin', nav: 'admin', admin: true },
+  { re: /^#\/admin(?:\/(partituras|banner|promos|colecciones|avisos|moderacion|alumnos))?(?:\/([\w-]+))?$/, view: 'admin', nav: 'admin', admin: true },
 ];
 
 const LOADERS = {
   library: () => import('./views/library.js').then((m) => m.renderLibrary),
+  explore: () => import('./views/explore.js').then((m) => m.renderExplore),
   favorites: () => import('./views/library.js').then((m) => m.renderFavorites),
   player: () => import('./views/player.js').then((m) => m.renderPlayer),
   feed: () => import('./views/feed.js').then((m) => m.renderFeed),
@@ -115,6 +117,7 @@ async function route() {
 const MENU = [
   { grp: 'Herramienta' },
   { href: '#/biblioteca', nav: 'biblioteca', ic: 'book', label: 'Biblioteca', rail: true },
+  { href: '#/explorar', nav: 'explorar', ic: 'search', label: 'Explorar', rail: true },
   { href: '#/favoritos', nav: 'favoritos', ic: 'heart', label: 'Mis partituras', rail: true },
   { grp: 'Comunidad' },
   { href: '#/comunidad', nav: 'comunidad', ic: 'feed', label: 'Inicio', rail: true },
@@ -139,6 +142,16 @@ function menuHTML() {
   }).join('') + admin;
 }
 
+/* ---------- tema claro/oscuro: interruptor rápido (barra lateral) ---------- */
+function esOscuro() { return document.documentElement.dataset.theme === 'dark'; }
+function alternarTema() {
+  const on = !esOscuro();
+  document.documentElement.dataset.theme = on ? 'dark' : 'light';
+  try { localStorage.setItem('enny-theme', document.documentElement.dataset.theme); } catch (_) {}
+  $$('.theme-toggle').forEach((b) => { b.innerHTML = icon(on ? 'sun' : 'moon'); b.title = on ? 'Modo claro' : 'Modo oscuro'; b.setAttribute('aria-label', b.title); b.setAttribute('aria-pressed', String(on)); });
+  const sw = $('#sideThemeSw'); if (sw) sw.classList.toggle('on', on);
+}
+
 function railHTML() {
   const top = MENU.filter((m) => m.rail && !m.foot);
   const foot = MENU.filter((m) => m.rail && m.foot);
@@ -147,7 +160,9 @@ function railHTML() {
   return `<a class="rl-logo" href="#/" aria-label="${esc(APP)}">${markSvg('hs-mark', true)}</a>
     <button class="rl-toggle" id="railToggle" title="${colapsado ? 'Mostrar menú' : 'Ocultar menú'}" aria-label="${colapsado ? 'Mostrar menú' : 'Ocultar menú'}">${icon(colapsado ? 'chevR' : 'chevL')}</button>
     <nav class="rl-nav">${top.map(btn).join('')}</nav>
-    <div class="rl-foot"><nav class="rl-nav">${foot.map(btn).join('')}</nav>
+    <div class="rl-foot"><nav class="rl-nav">
+      <button class="theme-toggle" title="${esOscuro() ? 'Modo claro' : 'Modo oscuro'}" aria-label="${esOscuro() ? 'Modo claro' : 'Modo oscuro'}" aria-pressed="${esOscuro()}">${icon(esOscuro() ? 'sun' : 'moon')}</button>
+      ${foot.map(btn).join('')}</nav>
       <button class="rl-av" id="railAv" aria-label="Tu perfil">${avatar(me)}</button></div>`;
 }
 
@@ -174,6 +189,7 @@ function paintShell() {
       <button class="cx-iconbtn sm sd-x" id="sideX" aria-label="Cerrar menú">${icon('x')}</button>
     </div>
     <nav class="cx-nav" aria-label="Principal">${menuHTML()}</nav>
+    <div class="cx-nav-theme">${icon('moon')}<span>Tema oscuro</span><button class="sw${esOscuro() ? ' on' : ''}" id="sideThemeSw" role="switch" aria-checked="${esOscuro()}" aria-label="Tema oscuro"></button></div>
     ${demoCard()}
     ${me.hasAccess ? '' : `<div class="cx-plan"><b>Biblioteca completa</b>Partituras que suenan, con loop y metrónomo, desde $5 al mes.<a href="#/ajustes/suscripcion">Ver planes →</a></div>`}
     <a class="sd-me" href="#/perfil/${esc(me.id)}">${avatar(me)}<div style="min-width:0"><b>${esc(me.name)}</b><span>${me.isAdmin ? 'Administradora' : me.hasAccess ? 'Suscripción activa' : 'Cuenta gratuita'}</span></div><i class="nv-ch">${icon('chevR')}</i></a>`;
@@ -186,13 +202,19 @@ function paintShell() {
     <a href="#/buscar" data-nav="buscar"><i>${icon('search')}</i><span>Buscar</span></a>
     <a href="#/perfil/${esc(me.id)}" data-nav="perfil"><i>${avatar(me, 'tab')}</i><span>Perfil</span></a>`;
 
-  $('#railAv').onclick = (e) => popMenu(e.currentTarget, [
+  const avMenu = [
     { label: me.name, icon: 'user', run: () => ctx.go(`#/perfil/${me.id}`) },
     { label: 'Editar perfil', icon: 'edit', run: () => ctx.go('#/editar-perfil') },
     { label: 'Ajustes', icon: 'settings', run: () => ctx.go('#/ajustes') },
     { label: me.hasAccess ? 'Mi suscripción' : 'Ver planes', icon: 'crown', run: () => ctx.go('#/ajustes/suscripcion') },
     { label: 'Cerrar sesión', icon: 'logout', danger: true, run: signOut },
-  ]);
+  ];
+  $('#railAv').onclick = (e) => popMenu(e.currentTarget, avMenu);
+  const topAv = $('#topAv');
+  topAv.innerHTML = avatar(me);
+  topAv.onclick = (e) => popMenu(e.currentTarget, avMenu);
+  $$('.theme-toggle').forEach((b) => { b.onclick = alternarTema; });
+  $('#sideThemeSw').onclick = alternarTema;
   $('#sideX').onclick = closeNav;
   $('#railToggle').onclick = alternarColapso;
   $$('.cx-nav a, .rl-nav a', $('#side').parentElement).forEach((a) => { a.addEventListener('click', closeNav); });

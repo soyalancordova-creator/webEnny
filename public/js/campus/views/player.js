@@ -50,6 +50,7 @@ export async function renderPlayer(ctx, view, [id]) {
     view.className = 'cx-view'; empty(view, 'info', e.message); return;
   }
   ctx.setTitle(s.title);
+  if (s.placeholder) toast('Esta obra todavía no tiene su arreglo propio: suena con un arreglo de muestra mientras se sube el real.');
   const pref = (() => { try { return JSON.parse(localStorage.getItem('enny-player') || '{}'); } catch (_) { return {}; } })();
   const savePref = (k, v) => { pref[k] = v; try { localStorage.setItem('enny-player', JSON.stringify(pref)); } catch (_) {} };
 

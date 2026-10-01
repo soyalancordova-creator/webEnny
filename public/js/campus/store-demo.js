@@ -8,6 +8,16 @@
 ============================================================ */
 import { demoXml } from './scores-demo.js';
 import { blobToDataURL } from './media.js';
+import { CATALOG_SHEETS, artistById } from './views/catalog-data.js';
+
+/* catálogo de artistas (itemfunes.com/explore): arreglo de muestra hasta subir el real (xml:'' cae al demo de Estrellita) */
+function catalogScoreRows() {
+  return CATALOG_SHEETS.map((c) => ({
+    id: c.id, title: c.title, composer: artistById[c.artistId].name, instrument: c.instrument, level: c.level,
+    key_label: c.tone, bpm: 80, collection: '', free: c.free, tags: [artistById[c.artistId].name, c.category],
+    published: true, pdf_url: '', media_url: '', sync: null, xml: '', created_at: ago(60 * 24 * 10),
+  }));
+}
 
 const KEY = 'enny-campus-demo-v1';
 const SESSION = 'enny-campus-demo-session';
@@ -97,6 +107,7 @@ function seed() {
     s('himno-alegria', 'Himno de la alegría', 'Ludwig van Beethoven', 'Violín', 'Inicial', 'Re mayor', 96, 'col-himnos', false, ['clásico']),
     s('escala-re', 'Escala y arpegio de Re mayor', 'Ejercicio · dos octavas', 'Violín', 'Intermedio', 'Re mayor', 72, 'col-tecnica', false, ['escalas', 'afinación']),
     s('himno-alegria-piano', 'Himno de la alegría · piano', 'Ludwig van Beethoven', 'Piano', 'Inicial', 'Do mayor', 92, 'col-himnos', false, ['piano', 'dos manos']),
+    ...catalogScoreRows(),
   ];
   const notifications = [
     { id: 'n0', user: null, kind: 'broadcast', title: 'Bienvenido a Hosannia', body: 'Esta semana subimos 5 obras nuevas a la biblioteca. Empieza por "Estrellita" si eres nuevo.', link: '#/biblioteca', actor: 'u-enny', created_at: ago(60 * 24 * 2) },
@@ -146,6 +157,8 @@ export function createDemoStore() {
   // los datos viejos del navegador no traen historias ni conexiones
   if (!db.follows) { db.follows = []; db.stories = []; db.story_views = []; }
   if (!db.directs) db.directs = [];
+  // los navegadores que ya traían datos de antes no tienen el catálogo de artistas
+  if (!db.scores.some((s) => s.id === CATALOG_SHEETS[0].id)) db.scores.push(...catalogScoreRows());
   const listeners = { msg: new Map(), dm: new Map(), notif: new Set() };
   const commit = () => save(db);
   const meId = () => localStorage.getItem(SESSION);
@@ -544,6 +557,7 @@ export function createDemoStore() {
     /* ---------- contenido editable (banners, textos sueltos) ---------- */
     async getContent(key) { return (db.content || {})[key] || null; },
     async uploadBanner(img) { this._admin(); return (await saveImage(img)).url; },
+    async uploadPromoImage(img) { this._admin(); return (await saveImage(img)).url; },
     async setContent(key, value) {
       this._admin(); db.content = db.content || {}; db.content[key] = value; commit(); return value;
     },
@@ -564,8 +578,7 @@ export function createDemoStore() {
       if (!s || (!s.published && !isAdmin())) throw new Error('Obra no disponible.');
       if (!s.free && !activeSub(me) && !isAdmin()) { const e = new Error('Necesitas una suscripción activa para abrir esta obra.'); e.code = 'PAYWALL'; throw e; }
       const xml = s.xml || demoXml(s.id);
-      if (!xml) throw new Error('Esta obra aún no tiene archivo MusicXML.');
-      return { ...s, xml, favorite: db.favorites.some((f) => f.user_id === me && f.score_id === id) };
+      return { ...s, xml, placeholder: !s.xml, favorite: db.favorites.some((f) => f.user_id === me && f.score_id === id) };
     },
     async toggleFavorite(scoreId) {
       const me = need(); const i = db.favorites.findIndex((f) => f.user_id === me && f.score_id === scoreId);
